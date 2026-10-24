@@ -8,6 +8,7 @@ use App\Jobs\PrintKioskJob;
 use App\Models\PrintJob;
 use App\Models\PrintPage;
 use App\Services\Print\CoinCreditService;
+use App\Http\Requests\StorePrintFilesRequest;
 use App\Services\Print\PrintDocumentStore;
 use App\Services\Print\PrintJobSession;
 use App\Services\Print\PrintPricing;
@@ -44,6 +45,46 @@ class PrintPaymentController extends Controller
         $this->documents->reorder($job, $data['page_ids']);
 
         $updates = ['duplex' => $data['duplex']];
+
+        if (! $job->kiosk_id && $this->session->kioskId()) {
+            $updates['kiosk_id'] = $this->session->kioskId();
+        }
+
+        $job->update($updates);
+
+        return redirect()->route('print.pay', $job);
+    }
+
+    public function hold(StorePrintFilesRequest $request, PrintJob $job): RedirectResponse
+    {
+        if (! $this->session->owns($job) || $job->status !== 'reviewing') {
+            return redirect()->route('print.create');
+        }
+
+        if ($job->documents()->exists()) {
+            return redirect()->route('print.pay', $job);
+        }
+
+        $data = $request->validate([
+            'duplex' => ['required', 'boolean'],
+            'selection' => ['required', 'array', 'min:1', 'max:500'],
+            'selection.*' => ['required', 'regex:/^\d+:\d+$/'],
+        ]);
+
+        $selection = array_map(function (string $item) {
+            [$fileIndex, $pageNumber] = array_map('intval', explode(':', $item, 2));
+
+            return [$fileIndex, $pageNumber];
+        }, $data['selection']);
+
+        $this->documents->hold(
+            $job,
+            array_values($request->file('files', [])),
+            $selection,
+            $request->locale(),
+        );
+
+        $updates = ['duplex' => $data['duplex'], 'locale' => $request->locale()];
 
         if (! $job->kiosk_id && $this->session->kioskId()) {
             $updates['kiosk_id'] = $this->session->kioskId();

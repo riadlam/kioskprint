@@ -8,7 +8,8 @@ import PhoneShell from '../../Components/Print/PhoneShell';
 import SimplexIcon from '../../Components/Print/SimplexIcon';
 import TemplatePicker from '../../Components/Print/TemplatePicker';
 import { copy } from '../../lib/printCopy';
-import { ACCEPT, isAndroid, isSupported, isTooBig, pickPrintFiles } from '../../lib/printFiles';
+import { clearDraft, mimeOf, pagesFromDraft, readDraft, saveDraft } from '../../lib/localPrintDraft';
+import { ACCEPT, countPdfPages, isAndroid, isPdfFile, isSupported, isTooBig, makeItemId, pickPrintFiles } from '../../lib/printFiles';
 
 const ACCESS_KEY = 'metbati.file-access';
 const LOCALE_KEY = 'metbati.print.locale';
@@ -30,7 +31,9 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
     const [notice, setNotice] = useState('');
     const [focus, setFocus] = useState(null);
     const [duplex, setDuplex] = useState(() => Boolean(job.duplex));
+    const serverBacked = (job.pages || []).length > 0;
     const [pages, setPages] = useState(() => withIndex(job.pages || []));
+    const [uploadPercent, setUploadPercent] = useState(null);
     const [draggingId, setDraggingId] = useState(null);
     const [checkingOut, setCheckingOut] = useState(false);
     const [templatesOpen, setTemplatesOpen] = useState(false);
@@ -43,10 +46,33 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
     }, [job.duplex]);
 
     useEffect(() => {
+        if (!serverBacked) {
+            return undefined;
+        }
         const next = withIndex(job.pages || []);
         pagesRef.current = next;
         setPages(next);
-    }, [job.pages]);
+        return undefined;
+    }, [job.pages, serverBacked]);
+
+    useEffect(() => {
+        if (serverBacked) {
+            return undefined;
+        }
+        let cancel = false;
+        readDraft(job.id).then((draft) => {
+            if (cancel || !draft?.pages?.length) {
+                return;
+            }
+            setDuplex(Boolean(draft.duplex));
+            const next = pagesFromDraft(draft);
+            pagesRef.current = next;
+            setPages(next);
+        });
+        return () => {
+            cancel = true;
+        };
+    }, [job.id, serverBacked]);
 
     useEffect(() => {
         pagesRef.current = pages;
@@ -98,19 +124,76 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
         }
 
         setNotice('');
-        form.transform((data) => ({ ...data, locale, files: accepted }));
-        form.post(`/print/${job.id}/documents`, { forceFormData: true, preserveScroll: true });
+        if (serverBacked) {
+            form.transform((data) => ({ ...data, locale, files: accepted }));
+            form.post(`/print/${job.id}/documents`, { forceFormData: true, preserveScroll: true });
+            return;
+        }
+
+        const draft = (await readDraft(job.id)) || { duplex, files: [], pages: [] };
+        const additions = [];
+        for (const file of accepted) {
+            let pageCount = 1;
+            if (isPdfFile(file)) {
+                try {
+                    pageCount = await countPdfPages(file);
+                } catch {
+                    pageCount = 1;
+                }
+            }
+            const key = makeItemId();
+            const type = mimeOf(file);
+            draft.files.push({ key, name: file.name, type, pages: pageCount, file });
+            for (let number = 1; number <= pageCount; number += 1) {
+                additions.push({ id: `${key}-${number}`, fileKey: key, number });
+            }
+        }
+        draft.pages = [...draft.pages, ...additions];
+        draft.duplex = duplex;
+        await saveDraft(job.id, draft);
+        const next = pagesFromDraft(draft);
+        pagesRef.current = next;
+        setPages(next);
+        setFocus(additions[0]?.id || null);
     }
 
     function removePage(pageId) {
         if (focus === pageId) {
             setFocus(null);
         }
-        router.delete(`/print/${job.id}/pages/${pageId}`, { preserveScroll: true });
+        if (serverBacked) {
+            router.delete(`/print/${job.id}/pages/${pageId}`, { preserveScroll: true });
+            return;
+        }
+
+        setPages((current) => {
+            const next = withIndex(current.filter((page) => page.id !== pageId));
+            const kept = new Set(next.map((page) => page.fileKey));
+            readDraft(job.id).then((draft) => {
+                if (!draft) {
+                    return;
+                }
+                draft.pages = draft.pages.filter((page) => page.id !== pageId);
+                draft.files = draft.files.filter((file) => kept.has(file.key));
+                draft.duplex = duplex;
+                saveDraft(job.id, draft);
+            });
+            pagesRef.current = next;
+            return next;
+        });
     }
 
     function setDuplexMode(next) {
         setDuplex(next);
+        if (!serverBacked) {
+            readDraft(job.id).then((draft) => {
+                if (!draft) {
+                    return;
+                }
+                draft.duplex = next;
+                saveDraft(job.id, draft);
+            });
+        }
     }
 
     function movePage(fromId, toId) {
@@ -127,7 +210,19 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
             const next = [...current];
             const [item] = next.splice(from, 1);
             next.splice(to, 0, item);
-            return withIndex(next);
+            const ordered = withIndex(next);
+            if (!serverBacked) {
+                readDraft(job.id).then((draft) => {
+                    if (!draft) {
+                        return;
+                    }
+                    const byId = new Map(draft.pages.map((page) => [page.id, page]));
+                    draft.pages = ordered.map((page) => byId.get(page.id)).filter(Boolean);
+                    draft.duplex = duplex;
+                    saveDraft(job.id, draft);
+                });
+            }
+            return ordered;
         });
     }
 
@@ -147,16 +242,58 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
         }
 
         setCheckingOut(true);
-        router.post(
-            `/print/${job.id}/checkout`,
-            {
-                page_ids: pagesRef.current.map((page) => page.id),
+        if (serverBacked) {
+            router.post(
+                `/print/${job.id}/checkout`,
+                {
+                    page_ids: pagesRef.current.map((page) => page.id),
+                    duplex,
+                },
+                {
+                    onFinish: () => setCheckingOut(false),
+                },
+            );
+            return;
+        }
+
+        const current = pagesRef.current;
+
+        readDraft(job.id).then((draft) => {
+            const byKey = new Map((draft?.files || []).map((file) => [file.key, file]));
+            const uploadFiles = [];
+            const indexByKey = new Map();
+            const selection = [];
+            current.forEach((page) => {
+                const stored = byKey.get(page.fileKey);
+                if (!stored) {
+                    return;
+                }
+                if (!indexByKey.has(page.fileKey)) {
+                    indexByKey.set(page.fileKey, uploadFiles.length);
+                    uploadFiles.push(stored.file);
+                }
+                selection.push(`${indexByKey.get(page.fileKey)}:${page.number}`);
+            });
+            if (!uploadFiles.length) {
+                setCheckingOut(false);
+                return;
+            }
+            form.transform(() => ({
+                locale,
                 duplex,
-            },
-            {
-                onFinish: () => setCheckingOut(false),
-            },
-        );
+                files: uploadFiles,
+                selection,
+            }));
+            form.post(`/print/${job.id}/hold`, {
+                forceFormData: true,
+                onProgress: (progress) => setUploadPercent(progress?.percentage ?? null),
+                onSuccess: () => clearDraft(job.id),
+                onFinish: () => {
+                    setCheckingOut(false);
+                    setUploadPercent(null);
+                },
+            });
+        });
     }
 
     function onCardPointerDown(event, pageId) {
@@ -269,7 +406,7 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
                             pages.length > 0 ? 'bg-primary' : 'bg-emerald-100 text-emerald-400'
                         }`}
                     >
-                        {checkingOut ? t.uploading : t.payCta}
+                        {checkingOut ? `${t.uploading}${uploadPercent != null ? ` ${uploadPercent}%` : ''}` : t.payCta}
                     </button>
                 </div>
             )}
@@ -294,7 +431,7 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
                             ? `${t.pageOf(active.number, active.document.page_count)} · A4`
                             : t.reviewTitle}
                     </p>
-                    <span className="font-mono text-[12px] font-semibold text-white/90">{job.total_pages}</span>
+                    <span className="font-mono text-[12px] font-semibold text-white/90">{pages.length}</span>
                     {active && (
                         <button
                             type="button"

@@ -104,6 +104,92 @@ class PrintDocumentStore
     }
 
     /**
+     * Store files and only the pages the customer kept, in their order.
+     * Called when they pay, so review stays on the phone.
+     *
+     * @param  array<int, UploadedFile>  $files
+     * @param  list<array{0: int, 1: int}>  $selection
+     */
+    public function hold(PrintJob $job, array $files, array $selection, string $locale): void
+    {
+        $max = (int) config('print.max_files');
+
+        if (count($files) > $max) {
+            throw ValidationException::withMessages([
+                'files' => $locale === 'ar'
+                    ? "يمكن إضافة {$max} ملفات كحد أقصى."
+                    : "Vous pouvez ajouter {$max} fichiers au maximum.",
+            ]);
+        }
+
+        $counted = [];
+        foreach ($files as $index => $file) {
+            try {
+                $counted[$index] = ['file' => $file, 'pages' => $this->pages->count($file)];
+            } catch (UnreadablePrintFile) {
+                throw ValidationException::withMessages([
+                    "files.{$index}" => $locale === 'ar'
+                        ? 'تعذر قراءة «'.$file->getClientOriginalName().'». أزل كلمة السر أو اختر ملفاً آخر.'
+                        : 'Impossible de lire «'.$file->getClientOriginalName().'». Retirez le mot de passe ou choisissez un autre fichier.',
+                ]);
+            }
+        }
+
+        foreach ($selection as $index => [$fileIndex, $pageNumber]) {
+            if (! isset($counted[$fileIndex]) || $pageNumber < 1 || $pageNumber > $counted[$fileIndex]['pages']) {
+                throw ValidationException::withMessages([
+                    "selection.{$index}" => $locale === 'ar'
+                        ? 'إحدى الصفحات لم تعد موجودة في الملف.'
+                        : 'Une page ne fait plus partie du fichier.',
+                ]);
+            }
+        }
+
+        $stored = [];
+
+        try {
+            DB::transaction(function () use ($job, $counted, $selection, &$stored) {
+                $documentPosition = 0;
+                $documents = [];
+
+                foreach ($counted as $index => $item) {
+                    /** @var UploadedFile $file */
+                    $file = $item['file'];
+                    $documentPosition++;
+                    $path = $file->store('print/'.$job->id, 'local');
+                    $stored[] = $path;
+
+                    $documents[$index] = $job->documents()->create([
+                        'original_name' => $file->getClientOriginalName(),
+                        'mime_type' => $file->getMimeType() ?: 'application/octet-stream',
+                        'path' => $path,
+                        'page_count' => $item['pages'],
+                        'position' => $documentPosition,
+                    ]);
+                }
+
+                $rows = [];
+                $now = now();
+                foreach ($selection as $position => [$fileIndex, $pageNumber]) {
+                    $rows[] = [
+                        'print_document_id' => $documents[$fileIndex]->id,
+                        'number' => $pageNumber,
+                        'position' => $position + 1,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+                }
+                PrintPage::query()->insert($rows);
+            });
+        } catch (ValidationException $exception) {
+            throw $exception;
+        } catch (Throwable $exception) {
+            Storage::disk('local')->delete($stored);
+            throw $exception;
+        }
+    }
+
+    /**
      * @param  array<int, int|string>  $pageIds
      */
     public function reorder(PrintJob $job, array $pageIds): void

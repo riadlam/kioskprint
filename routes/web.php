@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\KioskCoinController;
 use App\Http\Controllers\KioskPrintStatusController;
 use App\Http\Controllers\PrintDocumentController;
@@ -14,6 +15,10 @@ Route::get('/', function () {
     return Inertia::render('Welcome');
 });
 
+Route::get('/admin', [AdminDashboardController::class, 'show'])->name('admin');
+Route::post('/admin/login', [AdminDashboardController::class, 'login'])->name('admin.login');
+Route::post('/admin/logout', [AdminDashboardController::class, 'logout'])->name('admin.logout');
+
 Route::match(['GET', 'OPTIONS'], '/kiosk/{kiosk}/jobs/{job}', KioskPrintStatusController::class)
     ->name('kiosk.jobs.show');
 Route::post('/kiosk/{kiosk}/coins', KioskCoinController::class)
@@ -24,6 +29,7 @@ Route::post('/print', [PrintJobController::class, 'store'])->name('print.store')
 Route::post('/print/templates', [PrintTemplateController::class, 'store'])->name('print.templates.store');
 Route::get('/print/{job}', [PrintJobController::class, 'show'])->name('print.review');
 Route::post('/print/{job}/checkout', [PrintPaymentController::class, 'begin'])->name('print.checkout');
+Route::post('/print/{job}/hold', [PrintPaymentController::class, 'hold'])->name('print.hold');
 Route::get('/print/{job}/pay', [PrintPaymentController::class, 'show'])->name('print.pay');
 Route::post('/print/{job}/pay', [PrintPaymentController::class, 'store'])->name('print.pay.store');
 Route::get('/print/{job}/pay/status', [PrintPaymentController::class, 'status'])->name('print.pay.status');

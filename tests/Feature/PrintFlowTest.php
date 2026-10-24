@@ -165,6 +165,42 @@ class PrintFlowTest extends TestCase
         $this->assertNotNull($job->paid_at);
     }
 
+    public function test_files_stay_on_the_phone_until_payment(): void
+    {
+        Storage::fake('local');
+
+        $this->get('/print?kiosk=kiosk-demo-hold');
+        $job = PrintJob::query()->first();
+        $this->assertSame(0, $job->documents()->count());
+
+        $this->post(route('print.hold', $job), [
+            'locale' => 'ar',
+            'duplex' => true,
+            'files' => [
+                UploadedFile::fake()->image('first.jpg'),
+                UploadedFile::fake()->image('second.jpg'),
+            ],
+            'selection' => ['1:1', '0:1'],
+        ])->assertRedirect(route('print.pay', $job));
+
+        $job->refresh();
+        $this->assertTrue($job->duplex);
+        $this->assertSame(2, $job->pages()->count());
+        $this->assertSame(0, $job->documents()->count() - 2);
+
+        $names = $job->pages()->with('document')->get()
+            ->map(fn ($page) => $page->document->original_name)
+            ->all();
+        $this->assertSame(['second.jpg', 'first.jpg'], $names);
+
+        $this->get(route('print.pay', $job))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Print/Payment')
+                ->where('quote.page_count', 2)
+                ->where('quote.amount', 40));
+    }
+
     public function test_checkout_saves_order_and_duplex_then_opens_payment(): void
     {
         Storage::fake('local');
@@ -523,6 +559,42 @@ class PrintFlowTest extends TestCase
         $job->refresh();
         $this->assertSame('awaiting_payment', $job->status);
         $this->assertSame([], $this->printer()->units);
+    }
+
+    public function test_admin_dashboard_requires_the_password_and_lists_jobs(): void
+    {
+        config(['app.admin_password' => 'secret']);
+
+        $this->get('/admin')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Admin/Dashboard')
+                ->where('authed', false)
+                ->missing('jobs'));
+
+        $this->post('/admin/login', ['password' => 'nope'])
+            ->assertSessionHasErrors('password');
+
+        PrintJob::query()->create([
+            'locale' => 'ar',
+            'status' => 'printed',
+            'kiosk_id' => 'kiosk-admin',
+            'page_count' => 2,
+            'amount' => 40,
+            'currency' => 'DA',
+        ]);
+
+        $this->post('/admin/login', ['password' => 'secret'])
+            ->assertRedirect('/admin');
+
+        $this->get('/admin')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Admin/Dashboard')
+                ->where('authed', true)
+                ->has('health', 4)
+                ->where('jobs.0.kiosk_id', 'kiosk-admin')
+                ->where('jobs.0.status', 'printed'));
     }
 
     public function test_coin_route_rejects_a_missing_token(): void
