@@ -1,0 +1,184 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+@source '../**/*.jsx';
+
+@theme {
+    --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+    --color-primary: #059669;
+    --color-primary-hover: #047857;
+    --color-primary-dark: #065f46;
+    --color-ink: #0d0f14;
+    --color-slate: #475467;
+    --color-brand-cream: #f8f9fa;
+    --color-brand-surface: #f1f3f5;
+    --color-primary-hover: #047857;
+}
+
+html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
+    -webkit-font-smoothing: antialiased;
+}
+
+body {
+    font-family: var(--font-sans);
+    background-color: var(--color-brand-cream);
+    color: var(--color-ink);
+}
+
+::selection {
+    background-color: color-mix(in oklab, var(--color-primary) 25%, transparent);
+}
+
+.section-padding {
+    @apply px-6 md:px-12 lg:px-20 xl:px-32;
+}
+
+.section-y {
+    @apply py-20 md:py-28 lg:py-36;
+}
+
+.eyebrow {
+    @apply text-xs font-semibold uppercase tracking-widest text-primary;
+}
+
+.heading-section {
+    @apply text-3xl md:text-[2.75rem] font-extrabold leading-tight tracking-tight text-ink;
+}
+
+.heading-display {
+    @apply text-[2.75rem] md:text-[3.5rem] lg:text-[4.5rem] font-extrabold leading-[1.05] tracking-tight text-ink;
+}
+
+.text-display {
+    @apply text-[2.75rem] leading-[1.15] tracking-tight;
+}
+
+.text-display-lg {
+    @apply md:text-[3.5rem] md:leading-[1.1];
+}
+
+.text-display-xl {
+    @apply lg:text-[4.5rem] lg:leading-[1.05] lg:tracking-tighter;
+}
+
+.text-body {
+    @apply text-base md:text-lg leading-relaxed text-slate;
+}
+
+.text-small {
+    @apply text-sm;
+}
+
+.text-h3 {
+    @apply text-[1.75rem] font-extrabold tracking-tight;
+}
+
+.text-caption {
+    @apply text-xs uppercase tracking-widest;
+}
+
+.text-primary {
+    color: var(--color-primary);
+}
+
+.text-ink {
+    color: var(--color-ink);
+}
+
+.text-slate {
+    color: var(--color-slate);
+}
+
+.bg-ink {
+    background-color: var(--color-ink);
+}
+
+.bg-primary {
+    background-color: var(--color-primary);
+}
+
+.border-primary {
+    border-color: var(--color-primary);
+}
+
+.btn-primary {
+    @apply inline-flex items-center gap-2 rounded-xl bg-primary px-7 py-3.5 text-base font-semibold text-white shadow-sm transition-all duration-200 active:scale-[0.98];
+}
+
+.btn-primary:hover {
+    background-color: var(--color-primary-hover);
+}
+
+.btn-secondary {
+    @apply inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-7 py-3.5 text-base font-semibold text-ink transition-all duration-200 hover:border-ink hover:shadow-sm active:scale-[0.98];
+}
+
+.btn-text {
+    @apply inline-flex items-center gap-2 text-base font-semibold text-primary transition-all duration-200 hover:gap-3;
+}
+
+.shadow-ds-sm {
+    box-shadow: 0 1px 2px rgba(13, 15, 20, 0.05);
+}
+
+.bg-primary\/5 {
+    background-color: color-mix(in oklab, var(--color-primary) 5%, transparent);
+}
+
+.bg-primary\/10 {
+    background-color: color-mix(in oklab, var(--color-primary) 10%, transparent);
+}
+
+.border-primary\/20 {
+    border-color: color-mix(in oklab, var(--color-primary) 20%, transparent);
+}
+
+.hover\:bg-primary-hover:hover {
+    background-color: var(--color-primary-hover);
+}
+
+/* Recolor the original orange-accented illustrations/renders to brand green */
+.recolor-green {
+    filter: hue-rotate(118deg) saturate(1.12);
+}
+
+/* Subtle animated float used on hero accents */
+@keyframes metbati-float {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-8px);
+    }
+}
+
+.animate-float {
+    animation: metbati-float 6s ease-in-out infinite;
+}
+
+.print-studio {
+    background-color: #eef7f2;
+    background-image:
+        radial-gradient(circle at 12% 0%, rgba(5, 150, 105, 0.14), transparent 36%),
+        linear-gradient(180deg, #ffffff 0%, #eef7f2 48%, #e5f3ec 100%);
+}
+
+.print-studio-grid {
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.12) 1px, transparent 1px);
+    background-size: 18px 18px;
+    mask-image: radial-gradient(circle at center, black 20%, transparent 78%);
+}
+
+.a4-sheet {
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.65) inset,
+        0 18px 40px rgba(6, 78, 59, 0.28),
+        0 2px 6px rgba(6, 78, 59, 0.18);
+}

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" role="img" aria-label="Vendoprint">
+  <rect width="192" height="192" rx="40" fill="#FAF6EF"/>
+  <path d="M48 64h96v58H48z" fill="#FF4F00" stroke="#201515" stroke-width="10" stroke-linejoin="round"/>
+  <path d="M65 35h62v42H65z" fill="#fff" stroke="#201515" stroke-width="10" stroke-linejoin="round"/>
+  <path d="M66 117h60v40H66z" fill="#fff" stroke="#201515" stroke-width="10" stroke-linejoin="round"/>
+  <circle cx="128" cy="87" r="7" fill="#FAF6EF"/>
+  <path d="M79 130h34" stroke="#FF4F00" stroke-width="8" stroke-linecap="round"/>
+</svg>
