@@ -1,6 +1,7 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import PhoneShell from '../../Components/Print/PhoneShell';
+import { kioskEcho } from '../../lib/kioskEcho';
 import { copy, formatMoney } from '../../lib/printCopy';
 
 const LOCALE_KEY = 'metbati.print.locale';
@@ -28,38 +29,39 @@ export default function Payment({ job, quote, methods }) {
             return undefined;
         }
 
-        let cancelled = false;
+        if (!job.kiosk_id) {
+            return undefined;
+        }
 
-        async function poll() {
-            try {
-                const res = await fetch(`/print/${job.id}/pay/status`, {
-                    headers: { Accept: 'application/json' },
-                    credentials: 'same-origin',
-                });
-                if (!res.ok || cancelled) {
-                    return;
-                }
-                const data = await res.json();
-                if (cancelled) {
-                    return;
-                }
-                setInserted((current) => Math.max(current, Number(data.inserted || 0)));
-                if (data.complete) {
-                    setComplete(true);
-                }
-            } catch {
-                // keep polling; machine may reconnect
+        const echo = kioskEcho();
+        if (!echo) {
+            return undefined;
+        }
+
+        const name = `kiosk.${job.kiosk_id}`;
+        const channel = echo.channel(name);
+
+        function apply(event) {
+            if (!event || event.job_id !== job.id) {
+                return;
+            }
+            if (event.inserted !== undefined) {
+                setInserted((current) => Math.max(current, Number(event.inserted || 0)));
+            }
+            if (['paid', 'printing', 'printed'].includes(event.status)) {
+                setInserted((current) => Math.max(current, required));
+                setComplete(true);
             }
         }
 
-        poll();
-        const id = window.setInterval(poll, 1000);
+        channel.listen('.PrintJobPaymentProgress', apply);
+        channel.listen('.PrintJobPaid', apply);
 
         return () => {
-            cancelled = true;
-            window.clearInterval(id);
+            echo.leave(name);
+            echo.disconnect();
         };
-    }, [monnayeurActive, complete, job.id]);
+    }, [monnayeurActive, complete, job.id, job.kiosk_id, required]);
 
     function changeLocale(next) {
         sessionStorage.setItem(LOCALE_KEY, next);

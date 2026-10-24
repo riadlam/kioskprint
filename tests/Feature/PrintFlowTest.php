@@ -539,6 +539,59 @@ class PrintFlowTest extends TestCase
             ]);
     }
 
+    public function test_a_new_coin_session_replaces_an_empty_one_and_prints_when_paid(): void
+    {
+        Storage::fake('local');
+        config([
+            'print.simulate_monnayeur' => false,
+            'print.kiosk_coin_token' => 'test-token',
+        ]);
+
+        $first = $this->openCashJob('kiosk-next', 20);
+        $second = $this->anotherReview($first->kiosk_id, ['next.jpg']);
+        $second->update(['unit_price' => 20]);
+        $this->post(route('print.pay.store', $second), [
+            'payment_method' => 'monnayeur',
+        ])->assertRedirect();
+
+        $first->refresh();
+        $second->refresh();
+        $this->assertSame('failed', $first->status);
+        $this->assertSame('awaiting_payment', $second->status);
+
+        $this->coin('kiosk-next', 3, 'coin-new-session')->assertOk()->assertJson([
+            'result' => 'paid',
+            'job_id' => $second->id,
+            'inserted' => 20,
+        ]);
+
+        $second->refresh();
+        $this->assertSame('printed', $second->status);
+    }
+
+    public function test_coins_already_taken_keep_that_session(): void
+    {
+        Storage::fake('local');
+        config([
+            'print.simulate_monnayeur' => false,
+            'print.kiosk_coin_token' => 'test-token',
+        ]);
+
+        $first = $this->openCashJob('kiosk-hold', 50);
+        $this->coin('kiosk-hold', 3, 'hold-20da');
+
+        $second = $this->anotherReview($first->kiosk_id, ['other.jpg']);
+        $second->update(['unit_price' => 20]);
+
+        $this->post(route('print.pay.store', $second), [
+            'payment_method' => 'monnayeur',
+        ])->assertSessionHasErrors('payment_method');
+
+        $first->refresh();
+        $this->assertSame('awaiting_payment', $first->status);
+        $this->assertSame(20, (int) round((float) $first->amount_inserted));
+    }
+
     public function test_payment_status_does_not_mark_a_job_paid_by_itself(): void
     {
         Storage::fake('local');
@@ -641,6 +694,23 @@ class PrintFlowTest extends TestCase
     private function pageIds(PrintJob $job): array
     {
         return $job->pages()->pluck('print_pages.id')->map(fn ($id) => (int) $id)->all();
+    }
+
+    private function anotherReview(string $kioskId, array $names): PrintJob
+    {
+        $this->get('/print?kiosk='.$kioskId);
+        $job = PrintJob::query()->where('status', 'reviewing')->latest()->first();
+        $this->assertNotNull($job);
+
+        $this->post('/print/'.$job->id.'/documents', [
+            'locale' => 'ar',
+            'files' => array_map(
+                fn (string $name) => UploadedFile::fake()->image($name),
+                $names,
+            ),
+        ]);
+
+        return $job->fresh();
     }
 
     private function openCashJob(string $kioskId, int $unitPrice): PrintJob

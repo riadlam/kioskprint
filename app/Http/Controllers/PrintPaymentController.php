@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Events\PrintJobAwaitingPayment;
+use App\Events\PrintJobFailed;
 use App\Events\PrintJobPaid;
 use App\Jobs\PrintKioskJob;
 use App\Models\PrintJob;
@@ -115,6 +116,7 @@ class PrintPaymentController extends Controller
                 'status' => $job->status,
                 'payment_method' => $job->payment_method,
                 'amount_inserted' => (float) $job->amount_inserted,
+                'kiosk_id' => $job->kiosk_id,
             ],
             'quote' => $quote,
             'methods' => [
@@ -146,7 +148,9 @@ class PrintPaymentController extends Controller
             'payment_method' => ['required', Rule::in(config('print.payment_methods'))],
         ]);
 
-        $result = DB::transaction(function () use ($job, $data) {
+        $replaced = [];
+
+        $result = DB::transaction(function () use ($job, $data, &$replaced) {
             $locked = PrintJob::query()->whereKey($job->id)->lockForUpdate()->first();
 
             if (! $locked || $locked->status !== 'reviewing') {
@@ -181,16 +185,25 @@ class PrintPaymentController extends Controller
             }
 
             if ($data['payment_method'] === 'monnayeur') {
-                $busy = PrintJob::query()
+                $others = PrintJob::query()
                     ->where('kiosk_id', $locked->kiosk_id)
                     ->where('status', 'awaiting_payment')
                     ->where('payment_method', 'monnayeur')
                     ->whereKeyNot($locked->id)
                     ->lockForUpdate()
-                    ->exists();
+                    ->get();
 
-                if ($busy) {
+                $holdingCoins = $others->contains(
+                    fn (PrintJob $other) => (float) $other->amount_inserted > 0
+                );
+
+                if ($holdingCoins) {
                     return 'busy';
+                }
+
+                foreach ($others as $other) {
+                    $other->update(['status' => 'failed']);
+                    $replaced[] = $other->id;
                 }
             }
 
@@ -222,6 +235,13 @@ class PrintPaymentController extends Controller
 
         if ($result === 'mismatch') {
             return redirect()->route('print.review', $job);
+        }
+
+        foreach ($replaced as $replacedId) {
+            $previous = PrintJob::query()->find($replacedId);
+            if ($previous) {
+                $this->broadcastSafely(new PrintJobFailed($previous));
+            }
         }
 
         if ($result === 'print') {

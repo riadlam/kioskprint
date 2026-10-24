@@ -45,9 +45,13 @@ class KioskPrintRelay
     public function releasePending(string $kioskId): void
     {
         KioskPrintUnit::query()
-            ->where('kiosk_id', $kioskId)
-            ->where('state', 'pending')
-            ->orderBy('position')
+            ->select('kiosk_print_units.*')
+            ->join('print_jobs', 'print_jobs.id', '=', 'kiosk_print_units.print_job_id')
+            ->where('kiosk_print_units.kiosk_id', $kioskId)
+            ->where('kiosk_print_units.state', 'pending')
+            ->orderBy('print_jobs.created_at')
+            ->orderBy('kiosk_print_units.position')
+            ->get()
             ->each(fn (KioskPrintUnit $unit) => $this->push($unit));
     }
 

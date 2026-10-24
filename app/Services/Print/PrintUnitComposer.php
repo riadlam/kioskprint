@@ -134,18 +134,7 @@ class PrintUnitComposer
     private function imagePath(array $page, string $spoolDir): string
     {
         $path = $page['absolute_path'];
-        $webp = str_contains(strtolower($page['mime']), 'webp')
-            || str_ends_with(strtolower($path), '.webp');
-
-        if (! $webp) {
-            return $path;
-        }
-
-        if (! function_exists('imagecreatefromwebp')) {
-            throw new RuntimeException('WebP images are not supported by this PHP build.');
-        }
-
-        $image = @imagecreatefromwebp($path);
+        $image = $this->loadRaster($path, (string) $page['mime']);
 
         if ($image === false) {
             throw new RuntimeException('Unreadable image.');
@@ -156,5 +145,41 @@ class PrintUnitComposer
         imagedestroy($image);
 
         return $jpeg;
+    }
+
+    /**
+     * Phone photos are often 16-bit PNG. FPDF only accepts an 8-bit JPEG.
+     */
+    private function loadRaster(string $path, string $mime): \GdImage|false
+    {
+        $hint = strtolower($path.' '.$mime);
+        $image = false;
+
+        if (str_contains($hint, 'webp') && function_exists('imagecreatefromwebp')) {
+            $image = @imagecreatefromwebp($path);
+        } elseif (str_contains($hint, 'png')) {
+            $image = @imagecreatefrompng($path);
+        } else {
+            $image = @imagecreatefromjpeg($path);
+        }
+
+        if ($image === false) {
+            $raw = @file_get_contents($path);
+            $image = is_string($raw) ? @imagecreatefromstring($raw) : false;
+        }
+
+        if ($image === false) {
+            return false;
+        }
+
+        $width = imagesx($image);
+        $height = imagesy($image);
+        $flat = imagecreatetruecolor($width, $height);
+        $white = imagecolorallocate($flat, 255, 255, 255);
+        imagefill($flat, 0, 0, $white);
+        imagecopy($flat, $image, 0, 0, 0, 0, $width, $height);
+        imagedestroy($image);
+
+        return $flat;
     }
 }
