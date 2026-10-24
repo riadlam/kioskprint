@@ -1,4 +1,5 @@
-import { Head, router, useForm, usePage } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
+import AdminShell from '../../Components/Admin/Shell';
 
 const STATUS = {
     reviewing: { label: 'Reviewing', tone: 'bg-slate-100 text-slate-700' },
@@ -25,48 +26,12 @@ export default function Dashboard({ authed, email = '', health = [], summary = {
     const open = health.filter((check) => check.ok).length;
 
     return (
-        <div className="min-h-screen bg-[#f3f5f4] text-ink">
-            <Head title="Dashboard" />
-            <div className="flex min-h-screen">
-                <aside className="hidden w-[248px] shrink-0 flex-col bg-[#101513] text-white md:flex">
-                    <div className="px-6 pb-6 pt-7">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-300">Metbati</p>
-                        <p className="mt-1 text-[15px] font-semibold tracking-tight">Operations</p>
-                    </div>
-                    <nav className="flex flex-1 flex-col gap-1 px-3">
-                        <SideLink href="#overview" label="Overview" active />
-                        <SideLink href="#jobs" label="Print jobs" />
-                        <SideLink href="#health" label="System health" />
-                    </nav>
-                    <div className="border-t border-white/10 p-4">
-                        <p className="truncate text-[13px] font-medium">{email}</p>
-                        <p className="mt-0.5 text-[11px] text-white/50">Operator</p>
-                        <button
-                            type="button"
-                            onClick={() => router.post('/admin/logout')}
-                            className="mt-3 text-[12px] font-semibold text-emerald-300"
-                        >
-                            Sign out
-                        </button>
-                    </div>
-                </aside>
-
-                <div className="min-w-0 flex-1">
-                    <header className="flex items-center justify-between border-b border-black/5 bg-white px-5 py-4 md:px-8">
-                        <div>
-                            <h1 className="text-lg font-semibold tracking-tight">Dashboard</h1>
-                            <p className="text-[13px] text-slate">{open} of {health.length} systems healthy</p>
-                        </div>
-                        <button
-                            type="button"
-                            onClick={() => router.post('/admin/logout')}
-                            className="text-[13px] font-semibold text-primary md:hidden"
-                        >
-                            Sign out
-                        </button>
-                    </header>
-
-                    <main className="px-5 py-6 md:px-8 md:py-8">
+        <AdminShell
+            title="Dashboard"
+            subtitle={`${open} of ${health.length} systems healthy`}
+            active="overview"
+            email={email}
+        >
                         <section id="overview" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                             <Stat label="Print jobs" value={summary.jobs ?? 0} note="All time" />
                             <Stat label="Printed" value={summary.printed ?? 0} note="Completed" />
@@ -138,21 +103,7 @@ export default function Dashboard({ authed, email = '', health = [], summary = {
                                 </table>
                             </div>
                         </section>
-                    </main>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-function SideLink({ href, label, active = false }) {
-    return (
-        <a
-            href={href}
-            className={`rounded-lg px-3 py-2 text-[13px] font-medium ${active ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white'}`}
-        >
-            {label}
-        </a>
+        </AdminShell>
     );
 }
 

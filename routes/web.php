@@ -1,8 +1,10 @@
 <?php
 
 use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\AdminScreenController;
 use App\Http\Controllers\KioskCoinController;
 use App\Http\Controllers\KioskPrintStatusController;
+use App\Http\Controllers\KioskScreenController;
 use App\Http\Controllers\PrintDocumentController;
 use App\Http\Controllers\PrintJobController;
 use App\Http\Controllers\PrintPageController;
@@ -18,6 +20,18 @@ Route::get('/', function () {
 Route::get('/admin', [AdminDashboardController::class, 'show'])->name('admin');
 Route::post('/admin/login', [AdminDashboardController::class, 'login'])->name('admin.login');
 Route::post('/admin/logout', [AdminDashboardController::class, 'logout'])->name('admin.logout');
+
+Route::middleware('admin')->group(function () {
+    Route::get('/admin/screen', [AdminScreenController::class, 'show'])->name('admin.screen');
+    Route::put('/admin/screen', [AdminScreenController::class, 'update'])->name('admin.screen.update');
+    Route::post('/admin/screen/videos', [AdminScreenController::class, 'store'])->name('admin.screen.videos.store');
+    Route::patch('/admin/screen/videos/{video}', [AdminScreenController::class, 'updateVideo'])->name('admin.screen.videos.update');
+    Route::post('/admin/screen/videos/{video}/move', [AdminScreenController::class, 'move'])->name('admin.screen.videos.move');
+    Route::delete('/admin/screen/videos/{video}', [AdminScreenController::class, 'destroy'])->name('admin.screen.videos.destroy');
+});
+
+Route::match(['GET', 'OPTIONS'], '/kiosk/screen', [KioskScreenController::class, 'show'])->name('kiosk.screen');
+Route::match(['GET', 'OPTIONS'], '/kiosk/screen/videos/{video}', [KioskScreenController::class, 'video'])->name('kiosk.screen.video');
 
 Route::match(['GET', 'OPTIONS'], '/kiosk/{kiosk}/jobs/{job}', KioskPrintStatusController::class)
     ->name('kiosk.jobs.show');
