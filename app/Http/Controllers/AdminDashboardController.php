@@ -23,19 +23,30 @@ class AdminDashboardController extends Controller
 
         return Inertia::render('Admin/Dashboard', [
             'authed' => true,
+            'email' => (string) config('app.admin_email'),
             'health' => $this->health(),
+            'summary' => $this->summary(),
             'jobs' => $this->jobs(),
         ]);
     }
 
     public function login(Request $request): RedirectResponse
     {
-        $expected = (string) config('app.admin_password');
-        $given = (string) $request->input('password', '');
+        $email = strtolower(trim((string) $request->input('email', '')));
+        $password = (string) $request->input('password', '');
+        $expectedEmail = strtolower(trim((string) config('app.admin_email')));
+        $expectedPassword = (string) config('app.admin_password');
 
-        if ($expected === '' || ! hash_equals($expected, $given)) {
+        $matches = $expectedEmail !== ''
+            && $expectedPassword !== ''
+            && strlen($email) === strlen($expectedEmail)
+            && strlen($password) === strlen($expectedPassword)
+            && hash_equals($expectedEmail, $email)
+            && hash_equals($expectedPassword, $password);
+
+        if (! $matches) {
             return back()->withErrors([
-                'password' => 'Wrong password.',
+                'email' => 'Those details do not match.',
             ]);
         }
 
@@ -94,6 +105,25 @@ class AdminDashboardController extends Controller
         ];
 
         return $checks;
+    }
+
+    /**
+     * @return array{jobs: int, printed: int, failed: int, open: int, revenue: float}
+     */
+    private function summary(): array
+    {
+        $byStatus = PrintJob::query()
+            ->selectRaw('status, count(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        return [
+            'jobs' => (int) $byStatus->sum(),
+            'printed' => (int) ($byStatus['printed'] ?? 0),
+            'failed' => (int) ($byStatus['failed'] ?? 0),
+            'open' => (int) $byStatus->except(['printed', 'failed'])->sum(),
+            'revenue' => (float) PrintJob::query()->where('status', 'printed')->sum('amount'),
+        ];
     }
 
     /**

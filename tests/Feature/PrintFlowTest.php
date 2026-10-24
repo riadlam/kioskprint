@@ -561,9 +561,12 @@ class PrintFlowTest extends TestCase
         $this->assertSame([], $this->printer()->units);
     }
 
-    public function test_admin_dashboard_requires_the_password_and_lists_jobs(): void
+    public function test_admin_dashboard_requires_email_and_password_and_lists_jobs(): void
     {
-        config(['app.admin_password' => 'secret']);
+        config([
+            'app.admin_email' => 'admin@metbati.com',
+            'app.admin_password' => 'secret',
+        ]);
 
         $this->get('/admin')
             ->assertOk()
@@ -572,8 +575,10 @@ class PrintFlowTest extends TestCase
                 ->where('authed', false)
                 ->missing('jobs'));
 
-        $this->post('/admin/login', ['password' => 'nope'])
-            ->assertSessionHasErrors('password');
+        $this->post('/admin/login', [
+            'email' => 'admin@metbati.com',
+            'password' => 'nope',
+        ])->assertSessionHasErrors('email');
 
         PrintJob::query()->create([
             'locale' => 'ar',
@@ -584,15 +589,19 @@ class PrintFlowTest extends TestCase
             'currency' => 'DA',
         ]);
 
-        $this->post('/admin/login', ['password' => 'secret'])
-            ->assertRedirect('/admin');
+        $this->post('/admin/login', [
+            'email' => 'Admin@Metbati.com',
+            'password' => 'secret',
+        ])->assertRedirect('/admin');
 
         $this->get('/admin')
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('Admin/Dashboard')
                 ->where('authed', true)
+                ->where('email', 'admin@metbati.com')
                 ->has('health', 4)
+                ->where('summary.printed', 1)
                 ->where('jobs.0.kiosk_id', 'kiosk-admin')
                 ->where('jobs.0.status', 'printed'));
     }
