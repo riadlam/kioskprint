@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\AppDownloadController;
 use App\Http\Controllers\AdminScreenController;
 use App\Http\Controllers\KioskCoinController;
 use App\Http\Controllers\KioskPrintStatusController;
@@ -16,6 +17,9 @@ use Inertia\Inertia;
 Route::get('/', function () {
     return Inertia::render('Welcome');
 });
+
+Route::get('/app_download', [AppDownloadController::class, 'show'])->name('app.download');
+Route::get('/app_download/metbati.apk', [AppDownloadController::class, 'file'])->name('app.download.file');
 
 Route::get('/admin', [AdminDashboardController::class, 'show'])->name('admin');
 Route::post('/admin/login', [AdminDashboardController::class, 'login'])->name('admin.login');
