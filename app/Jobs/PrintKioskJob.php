@@ -8,6 +8,7 @@ use App\Events\PrintJobProgress;
 use App\Models\PrintJob;
 use App\Models\PrintPage;
 use App\Services\Print\KioskPrinter;
+use App\Services\Print\KioskPrintRelay;
 use App\Services\Print\PrintUnitComposer;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -44,6 +45,12 @@ class PrintKioskJob implements ShouldBeUnique, ShouldQueue
 
     public function handle(PrintUnitComposer $composer, KioskPrinter $printer): void
     {
+        if (config('print.driver') === 'socket') {
+            $this->handOff($composer);
+
+            return;
+        }
+
         $job = $this->claim();
 
         if (! $job) {
@@ -79,6 +86,26 @@ class PrintKioskJob implements ShouldBeUnique, ShouldQueue
             report($exception);
         } finally {
             Storage::disk('local')->deleteDirectory($folder);
+        }
+    }
+
+    private function handOff(PrintUnitComposer $composer): void
+    {
+        $job = $this->claim();
+
+        if (! $job) {
+            return;
+        }
+
+        try {
+            $pages = $this->orderedPages($job);
+            $units = $composer->compose($job->id, $pages, (bool) $job->duplex);
+            app(KioskPrintRelay::class)->queue($job, $units);
+        } catch (Throwable $exception) {
+            $job->update(['status' => 'failed']);
+            $this->broadcastSafely(new PrintJobFailed($job->fresh()));
+            Storage::disk('local')->deleteDirectory('print-spool/'.$job->id);
+            report($exception);
         }
     }
 

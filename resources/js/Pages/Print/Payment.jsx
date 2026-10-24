@@ -13,6 +13,7 @@ export default function Payment({ job, quote, methods }) {
     const selected = flash?.payment_started || job.payment_method || '';
     const monnayeurActive = selected === 'monnayeur';
     const posteActive = selected === 'algerie_poste';
+    const postePaid = posteActive && ['paid', 'printing', 'printed'].includes(job.status);
 
     const [inserted, setInserted] = useState(() => Number(job.amount_inserted || 0));
     const [complete, setComplete] = useState(
@@ -279,17 +280,15 @@ export default function Payment({ job, quote, methods }) {
                     {posteActive && (
                         <div className="mt-4 rounded-2xl border border-[#1e2a78]/20 bg-white px-4 py-3">
                             <p className="text-[13px] font-extrabold text-ink">
-                                {job.status === 'paid' || job.status === 'printed' ? t.payComplete : t.paySelected}
+                                {postePaid ? t.payComplete : t.paySelected}
                             </p>
                             <p className="mt-1 text-[13px] font-medium text-slate">
-                                {job.status === 'paid' || job.status === 'printed'
-                                    ? t.payComplete
-                                    : meta.algerie_poste.waiting}
+                                {postePaid ? t.payComplete : meta.algerie_poste.waiting}
                             </p>
                             <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#eef0f8]">
                                 <div
                                     className={`h-full rounded-full bg-[#1e2a78] ${
-                                        job.status === 'paid' || job.status === 'printed' ? 'w-full' : 'w-2/3 animate-pulse'
+                                        postePaid ? 'w-full' : 'w-2/3 animate-pulse'
                                     }`}
                                 />
                             </div>

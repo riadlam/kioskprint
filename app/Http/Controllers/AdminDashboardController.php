@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\KioskPc;
 use App\Models\PrintJob;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,6 +28,7 @@ class AdminDashboardController extends Controller
             'health' => $this->health(),
             'summary' => $this->summary(),
             'jobs' => $this->jobs(),
+            'kiosks' => $this->kiosks(),
         ]);
     }
 
@@ -124,6 +126,26 @@ class AdminDashboardController extends Controller
             'open' => (int) $byStatus->except(['printed', 'failed'])->sum(),
             'revenue' => (float) PrintJob::query()->where('status', 'printed')->sum('amount'),
         ];
+    }
+
+    /**
+     * @return list<array{kiosk_id: string, last_error: ?string}>
+     */
+    private function kiosks(): array
+    {
+        if (! Schema::hasTable('kiosk_pcs')) {
+            return [];
+        }
+
+        $rows = KioskPc::query()->get()->keyBy('kiosk_id');
+        $ids = $rows->keys()->merge(
+            PrintJob::query()->whereNotNull('kiosk_id')->distinct()->pluck('kiosk_id'),
+        )->unique()->sort()->values();
+
+        return $ids->map(fn ($id) => [
+            'kiosk_id' => (string) $id,
+            'last_error' => $rows->get($id)?->last_error,
+        ])->all();
     }
 
     /**

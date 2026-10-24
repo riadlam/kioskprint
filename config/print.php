@@ -26,8 +26,9 @@ return [
     'kiosk_coin_token' => env('KIOSK_COIN_TOKEN', ''),
     /** Debug: Algérie Poste selection completes payment and starts the kiosk print. */
     'emulate_poste_paid' => (bool) env('PRINT_EMULATE_POSTE_PAID', true),
-    /** windows sends to the named queue; fake records units for tests. */
+    /** windows prints on this machine; socket pushes each sheet to the mini PC; remote posts over HTTP; fake records units for tests. */
     'driver' => env('PRINT_DRIVER', 'windows'),
+    'kiosk_url' => env('KIOSK_PRINT_URL', ''),
     'printer_name' => env('PRINT_PRINTER_NAME', 'Canon LBP6030/6040/6018L'),
     'sumatra_path' => env('PRINT_SUMATRA_PATH', base_path('tools/sumatra/SumatraPDF-3.5.2-64.exe')),
     'page_timeout' => (int) env('PRINT_PAGE_TIMEOUT', 90),

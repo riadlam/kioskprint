@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Services\Print\FakeKioskPrinter;
 use App\Services\Print\KioskPrinter;
+use App\Services\Print\RemoteKioskPrinter;
 use App\Services\Print\WindowsKioskPrinter;
 use Illuminate\Support\ServiceProvider;
 
@@ -19,6 +20,14 @@ class AppServiceProvider extends ServiceProvider
                 return new WindowsKioskPrinter(
                     (string) config('print.sumatra_path'),
                     (string) config('print.printer_name'),
+                    (int) config('print.page_timeout'),
+                );
+            }
+
+            if (config('print.driver') === 'remote') {
+                return new RemoteKioskPrinter(
+                    (string) config('print.kiosk_url'),
+                    (string) config('print.kiosk_coin_token'),
                     (int) config('print.page_timeout'),
                 );
             }

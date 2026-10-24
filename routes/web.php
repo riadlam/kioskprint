@@ -1,9 +1,12 @@
 <?php
 
+use App\Http\Controllers\AdminBroadcastController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AppDownloadController;
 use App\Http\Controllers\AdminScreenController;
+use App\Http\Controllers\KioskBroadcastController;
 use App\Http\Controllers\KioskCoinController;
+use App\Http\Controllers\KioskPrintUnitController;
 use App\Http\Controllers\KioskPrintStatusController;
 use App\Http\Controllers\KioskScreenController;
 use App\Http\Controllers\PrintDocumentController;
@@ -24,6 +27,7 @@ Route::get('/app_download/metbati.apk', [AppDownloadController::class, 'file'])-
 Route::get('/admin', [AdminDashboardController::class, 'show'])->name('admin');
 Route::post('/admin/login', [AdminDashboardController::class, 'login'])->name('admin.login');
 Route::post('/admin/logout', [AdminDashboardController::class, 'logout'])->name('admin.logout');
+Route::post('/admin/broadcasting/auth', AdminBroadcastController::class)->name('admin.broadcast');
 
 Route::middleware('admin')->group(function () {
     Route::get('/admin/screen', [AdminScreenController::class, 'show'])->name('admin.screen');
@@ -36,6 +40,13 @@ Route::middleware('admin')->group(function () {
 
 Route::match(['GET', 'OPTIONS'], '/kiosk/screen', [KioskScreenController::class, 'show'])->name('kiosk.screen');
 Route::match(['GET', 'OPTIONS'], '/kiosk/screen/videos/{video}', [KioskScreenController::class, 'video'])->name('kiosk.screen.video');
+
+Route::post('/kiosk/broadcasting/auth', KioskBroadcastController::class)->name('kiosk.broadcast');
+Route::post('/kiosk/{kiosk}/ready', [KioskPrintUnitController::class, 'ready'])->name('kiosk.ready');
+Route::get('/kiosk/{kiosk}/units/{unit}/file', [KioskPrintUnitController::class, 'file'])
+    ->middleware('signed')
+    ->name('kiosk.units.file');
+Route::post('/kiosk/{kiosk}/units/{unit}', [KioskPrintUnitController::class, 'result'])->name('kiosk.units.result');
 
 Route::match(['GET', 'OPTIONS'], '/kiosk/{kiosk}/jobs/{job}', KioskPrintStatusController::class)
     ->name('kiosk.jobs.show');
