@@ -14,23 +14,18 @@ export default function Payment({ job, quote, methods }) {
     const selected = flash?.payment_started || job.payment_method || '';
     const monnayeurActive = selected === 'monnayeur';
     const posteActive = selected === 'algerie_poste';
-    const postePaid = posteActive && ['paid', 'printing', 'printed'].includes(job.status);
-
     const [inserted, setInserted] = useState(() => Number(job.amount_inserted || 0));
-    const [complete, setComplete] = useState(
-        job.status === 'paid' || job.status === 'printing' || job.status === 'printed',
-    );
+    const [phase, setPhase] = useState(() => phaseOf(job.status));
+    const [pagesDone, setPagesDone] = useState(() => Number(job.printed_pages || 0));
+    const [pageTotal, setPageTotal] = useState(() => Number(quote.page_count || job.page_count || 0));
     const [onChooser, setOnChooser] = useState(false);
     const required = Number(quote.amount || 0);
     const remaining = Math.max(0, Math.round((required - inserted) * 100) / 100);
     const progress = required > 0 ? Math.min(1, inserted / required) : 0;
+    const printPercent = pageTotal > 0 ? Math.min(100, Math.round((pagesDone / pageTotal) * 100)) : 0;
 
     useEffect(() => {
-        if (!monnayeurActive || complete) {
-            return undefined;
-        }
-
-        if (!job.kiosk_id) {
+        if (!job.kiosk_id || (!monnayeurActive && !posteActive)) {
             return undefined;
         }
 
@@ -42,27 +37,58 @@ export default function Payment({ job, quote, methods }) {
         const name = `kiosk.${job.kiosk_id}`;
         const channel = echo.channel(name);
 
-        function apply(event) {
-            if (!event || event.job_id !== job.id) {
-                return;
-            }
-            if (event.inserted !== undefined) {
-                setInserted((current) => Math.max(current, Number(event.inserted || 0)));
-            }
-            if (['paid', 'printing', 'printed'].includes(event.status)) {
-                setInserted((current) => Math.max(current, required));
-                setComplete(true);
-            }
+        function sameJob(event) {
+            return event && event.job_id === job.id;
         }
 
-        channel.listen('.PrintJobPaymentProgress', apply);
-        channel.listen('.PrintJobPaid', apply);
+        channel.listen('.PrintJobPaymentProgress', (event) => {
+            if (!sameJob(event) || event.inserted === undefined) {
+                return;
+            }
+            setInserted((current) => Math.max(current, Number(event.inserted || 0)));
+        });
+        channel.listen('.PrintJobPaid', (event) => {
+            if (!sameJob(event)) {
+                return;
+            }
+            setInserted((current) => Math.max(current, required));
+            setPhase((current) => (current === 'done' || current === 'failed' ? current : 'printing'));
+        });
+        channel.listen('.PrintJobProgress', (event) => {
+            if (!sameJob(event)) {
+                return;
+            }
+            const next = Number(event.current_page || 0);
+            const total = Number(event.total_pages || 0);
+            setPagesDone((current) => Math.max(current, next));
+            if (total > 0) {
+                setPageTotal(total);
+            }
+            setPhase((current) => (current === 'done' || current === 'failed' ? current : 'printing'));
+        });
+        channel.listen('.PrintJobCompleted', (event) => {
+            if (!sameJob(event)) {
+                return;
+            }
+            const total = Number(event.page_count || 0);
+            if (total > 0) {
+                setPageTotal(total);
+                setPagesDone(total);
+            }
+            setPhase('done');
+        });
+        channel.listen('.PrintJobFailed', (event) => {
+            if (!sameJob(event)) {
+                return;
+            }
+            setPhase('failed');
+        });
 
         return () => {
             echo.leave(name);
             echo.disconnect();
         };
-    }, [monnayeurActive, complete, job.id, job.kiosk_id, required]);
+    }, [monnayeurActive, posteActive, job.id, job.kiosk_id, required]);
 
     function changeLocale(next) {
         sessionStorage.setItem(LOCALE_KEY, next);
@@ -74,14 +100,20 @@ export default function Payment({ job, quote, methods }) {
             return;
         }
         setOnChooser(false);
-        setComplete(false);
+        setPhase('pay');
+        setPagesDone(0);
         setInserted(0);
         form.transform(() => ({ payment_method: methodId }));
         form.post(`/print/${job.id}/pay`, { preserveScroll: true });
     }
 
-    const paid = complete || postePaid;
-    const screen = onChooser || (!monnayeurActive && !posteActive) ? 'choose' : monnayeurActive ? 'cash' : 'poste';
+    const screen = phase === 'printing' || phase === 'done' || phase === 'failed'
+        ? phase
+        : onChooser || (!monnayeurActive && !posteActive)
+            ? 'choose'
+            : monnayeurActive
+                ? 'cash'
+                : 'poste';
 
     const meta = {
         monnayeur: {
@@ -175,13 +207,15 @@ export default function Payment({ job, quote, methods }) {
                     </section>
                 ) : (
                     <section className="flex flex-1 flex-col px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
-                        <button
-                            type="button"
-                            onClick={() => setOnChooser(true)}
-                            className="mb-4 self-start text-[13px] font-bold text-slate"
-                        >
-                            {t.payChangeMethod}
-                        </button>
+                        {(screen === 'cash' || screen === 'poste') && (
+                            <button
+                                type="button"
+                                onClick={() => setOnChooser(true)}
+                                className="mb-4 self-start text-[13px] font-bold text-slate"
+                            >
+                                {t.payChangeMethod}
+                            </button>
+                        )}
 
                         {screen === 'cash' && (
                             <div className="rounded-3xl border border-emerald-200 bg-white px-5 py-5">
@@ -217,15 +251,104 @@ export default function Payment({ job, quote, methods }) {
                                 <p className="text-[1.15rem] font-black text-ink">{meta.algerie_poste.title}</p>
                                 <p className="mt-1 text-[13px] font-medium text-slate">{meta.algerie_poste.waiting}</p>
                                 <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-[#eef0f8]">
-                                    <div className={`h-full rounded-full bg-[#1e2a78] ${postePaid ? 'w-full' : 'w-2/3 animate-pulse'}`} />
+                                    <div className="h-full w-2/3 animate-pulse rounded-full bg-[#1e2a78]" />
                                 </div>
+                            </div>
+                        )}
+
+                        {(screen === 'printing' || screen === 'done') && (
+                            <PrintMonitor
+                                title={t.payPrintingTitle}
+                                hint={t.payPrintingHint}
+                                pagesLabel={t.payPrintingPages}
+                                paidLabel={t.payPrintingPaid}
+                                current={screen === 'done' ? pageTotal : pagesDone}
+                                total={pageTotal}
+                                percent={screen === 'done' ? 100 : printPercent}
+                                amount={formatMoney(quote.amount, locale)}
+                            />
+                        )}
+
+                        {screen === 'failed' && (
+                            <div className="rounded-3xl bg-white px-6 py-8 text-center shadow-sm">
+                                <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-red-600 text-white">
+                                    <svg viewBox="0 0 24 24" className="h-10 w-10" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                                        <path d="M6 9V5h12v4" />
+                                        <path d="M6 18h12v-5H6v5z" />
+                                        <path d="M6 14H4a2 2 0 01-2-2v-1a2 2 0 012-2h16a2 2 0 012 2v1a2 2 0 01-2 2h-2" />
+                                        <path d="M4 4l16 16" />
+                                    </svg>
+                                </span>
+                                <p className="mt-4 text-[1.25rem] font-black text-ink">{t.payFailedTitle}</p>
+                                <p className="mt-2 text-[13px] font-medium leading-5 text-slate">{t.payFailedBody}</p>
                             </div>
                         )}
                     </section>
                 )}
             </div>
-            {paid && <PaidDialog title={t.payComplete} body={t.payDoneBody} amount={formatMoney(quote.amount, locale)} />}
+            {phase === 'done' && (
+                <PaidDialog title={t.paySuccessTitle} body={t.payDoneBody} amount={formatMoney(quote.amount, locale)} />
+            )}
         </PhoneShell>
+    );
+}
+
+function phaseOf(status) {
+    if (status === 'printed') {
+        return 'done';
+    }
+    if (status === 'failed') {
+        return 'failed';
+    }
+    if (status === 'paid' || status === 'printing') {
+        return 'printing';
+    }
+    return 'pay';
+}
+
+function PrintMonitor({ title, hint, pagesLabel, paidLabel, current, total, percent, amount }) {
+    const spinning = percent <= 0;
+    const turn = Math.min(100, Math.max(0, percent));
+
+    return (
+        <div className="flex flex-col items-center px-2 pt-4">
+            <span className="relative flex h-[88px] w-[88px] items-center justify-center text-primary">
+                <svg viewBox="0 0 88 88" className={`absolute inset-0 h-full w-full ${spinning ? 'animate-spin' : '-rotate-90'}`} aria-hidden>
+                    <circle cx="44" cy="44" r="36" fill="none" stroke="currentColor" strokeOpacity="0.15" strokeWidth="7" />
+                    <circle
+                        cx="44"
+                        cy="44"
+                        r="36"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="7"
+                        strokeLinecap="round"
+                        strokeDasharray={spinning ? '48 180' : `${(turn / 100) * 226} 226`}
+                    />
+                </svg>
+                <svg viewBox="0 0 24 24" className="relative h-9 w-9" fill="currentColor" aria-hidden>
+                    <path d="M6 9V3h12v6H6zm12 2H6a3 3 0 00-3 3v4h4v3h10v-3h4v-4a3 3 0 00-3-3zm-2 8H8v-4h8v4z" />
+                </svg>
+            </span>
+            <p className="mt-5 text-center text-[1.6rem] font-black tracking-tight text-ink">{title}</p>
+            <p className="mt-2 text-center text-[14px] font-medium text-slate">{hint}</p>
+            <div className="mt-5 w-full rounded-[20px] border border-emerald-200 bg-white px-5 py-4">
+                <div className="flex items-center justify-between gap-3">
+                    <p className="text-[14px] font-semibold text-slate">{pagesLabel}</p>
+                    <p className="text-[1.15rem] font-black tabular-nums text-ink">{current} / {total}</p>
+                </div>
+                <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-emerald-100">
+                    <div
+                        className={`h-full rounded-full bg-primary ${spinning ? 'w-1/3 animate-pulse' : ''}`}
+                        style={spinning ? undefined : { width: `${Math.max(turn, 4)}%` }}
+                    />
+                </div>
+                <div className="mt-3 flex items-center justify-between gap-3">
+                    <p className="text-[14px] font-semibold text-slate">{paidLabel}</p>
+                    <p className="text-[1.15rem] font-black text-primary">{amount}</p>
+                </div>
+            </div>
+        </div>
     );
 }
 

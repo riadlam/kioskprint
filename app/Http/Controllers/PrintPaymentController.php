@@ -116,6 +116,7 @@ class PrintPaymentController extends Controller
                 'status' => $job->status,
                 'payment_method' => $job->payment_method,
                 'amount_inserted' => (float) $job->amount_inserted,
+                'printed_pages' => (int) $job->printed_pages,
                 'kiosk_id' => $job->kiosk_id,
             ],
             'quote' => $quote,
