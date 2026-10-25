@@ -18,8 +18,9 @@ export default function Payment({ job, quote, methods }) {
 
     const [inserted, setInserted] = useState(() => Number(job.amount_inserted || 0));
     const [complete, setComplete] = useState(
-        job.status === 'paid' || job.status === 'printed',
+        job.status === 'paid' || job.status === 'printing' || job.status === 'printed',
     );
+    const [onChooser, setOnChooser] = useState(false);
     const required = Number(quote.amount || 0);
     const remaining = Math.max(0, Math.round((required - inserted) * 100) / 100);
     const progress = required > 0 ? Math.min(1, inserted / required) : 0;
@@ -72,11 +73,15 @@ export default function Payment({ job, quote, methods }) {
         if (selected === methodId && form.processing) {
             return;
         }
+        setOnChooser(false);
         setComplete(false);
         setInserted(0);
         form.transform(() => ({ payment_method: methodId }));
         form.post(`/print/${job.id}/pay`, { preserveScroll: true });
     }
+
+    const paid = complete || postePaid;
+    const screen = onChooser || (!monnayeurActive && !posteActive) ? 'choose' : monnayeurActive ? 'cash' : 'poste';
 
     const meta = {
         monnayeur: {
@@ -136,168 +141,119 @@ export default function Payment({ job, quote, methods }) {
                     <p className="mt-3 text-center text-[13px] font-medium leading-snug text-slate">{t.payHint}</p>
                 </section>
 
-                <section className="flex flex-1 flex-col px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
-                    <p className="mb-3 text-[15px] font-extrabold text-ink">{t.payChoose}</p>
+                {screen === 'choose' ? (
+                    <section className="flex flex-1 flex-col px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
+                        <p className="mb-3 text-[15px] font-extrabold text-ink">{t.payChoose}</p>
+                        <div className="space-y-3">
+                            {methods.map((method) => {
+                                const info = meta[method.id];
+                                const gold = info.tone === 'gold';
 
-                    <div className="space-y-3">
-                        {methods.map((method) => {
-                            const info = meta[method.id];
-                            const active = selected === method.id;
-                            const gold = info.tone === 'gold';
-
-                            return (
-                                <button
-                                    key={method.id}
-                                    type="button"
-                                    disabled={form.processing}
-                                    onClick={() => pay(method.id)}
-                                    className={`flex w-full items-center gap-4 rounded-2xl border px-4 py-4 text-start transition active:scale-[0.99] ${
-                                        active
-                                            ? gold
-                                                ? 'border-[#1e2a78] bg-white shadow-md ring-1 ring-[#1e2a78]/20'
-                                                : 'border-primary bg-white shadow-md ring-1 ring-primary/20'
-                                            : 'border-emerald-900/10 bg-white'
-                                    }`}
-                                >
-                                    <span
-                                        className={`flex h-[4.25rem] w-[4.25rem] shrink-0 items-center justify-center rounded-2xl ${
-                                            active
-                                                ? gold
-                                                    ? 'bg-[#fff8db]'
-                                                    : 'bg-emerald-50'
-                                                : 'bg-[#f3f5f4]'
-                                        }`}
+                                return (
+                                    <button
+                                        key={method.id}
+                                        type="button"
+                                        disabled={form.processing}
+                                        onClick={() => pay(method.id)}
+                                        className="flex w-full items-center gap-4 rounded-2xl border border-emerald-900/10 bg-white px-4 py-4 text-start transition active:scale-[0.99]"
                                     >
-                                        <img
-                                            src={method.icon}
-                                            alt=""
-                                            className={`object-contain ${gold ? 'h-14 w-14' : 'h-11 w-11'}`}
+                                        <span className={`flex h-[4.25rem] w-[4.25rem] shrink-0 items-center justify-center rounded-2xl ${gold ? 'bg-[#fff8db]' : 'bg-emerald-50'}`}>
+                                            <img src={method.icon} alt="" className={`object-contain ${gold ? 'h-14 w-14' : 'h-11 w-11'}`} />
+                                        </span>
+                                        <span className="min-w-0 flex-1">
+                                            <span className="block text-[1.05rem] font-extrabold leading-snug text-ink">{info.title}</span>
+                                            <span className="mt-1 block text-[13px] font-medium leading-snug text-slate">{info.hint}</span>
+                                        </span>
+                                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#eef2f0] text-[15px] font-black text-slate">›</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        {form.errors.payment_method && (
+                            <p className="mt-3 text-[13px] font-semibold text-red-700">{form.errors.payment_method}</p>
+                        )}
+                    </section>
+                ) : (
+                    <section className="flex flex-1 flex-col px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
+                        <button
+                            type="button"
+                            onClick={() => setOnChooser(true)}
+                            className="mb-4 self-start text-[13px] font-bold text-slate"
+                        >
+                            {t.payChangeMethod}
+                        </button>
+
+                        {screen === 'cash' && (
+                            <div className="rounded-3xl border border-emerald-200 bg-white px-5 py-5">
+                                <p className="text-[1.15rem] font-black text-ink">{t.payInsertCash}</p>
+                                <p className="mt-1 text-[13px] font-medium text-slate">{t.payListening}</p>
+                                <div className="mt-4 grid grid-cols-2 gap-2">
+                                    <div className="rounded-xl bg-emerald-50 px-3 py-3 text-center">
+                                        <p className="text-[11px] font-bold text-primary">{t.payInserted}</p>
+                                        <p className="mt-0.5 text-[1.15rem] font-black tabular-nums text-ink">{formatMoney(inserted, locale)}</p>
+                                    </div>
+                                    <div className="rounded-xl bg-[#f4faf7] px-3 py-3 text-center">
+                                        <p className="text-[11px] font-bold text-slate">{t.payRemaining}</p>
+                                        <p className="mt-0.5 text-[1.15rem] font-black tabular-nums text-ink">{formatMoney(remaining, locale)}</p>
+                                    </div>
+                                </div>
+                                <div className="mt-4">
+                                    <div className="mb-1 flex items-center justify-between text-[11px] font-semibold text-slate">
+                                        <span>{t.payDue}: {formatMoney(required, locale)}</span>
+                                        <span>{Math.round(progress * 100)}%</span>
+                                    </div>
+                                    <div className="h-2.5 overflow-hidden rounded-full bg-emerald-100">
+                                        <div
+                                            className="h-full rounded-full bg-primary transition-all duration-500"
+                                            style={{ width: `${Math.max(progress * 100, 4)}%` }}
                                         />
-                                    </span>
-
-                                    <span className="min-w-0 flex-1">
-                                        <span className="block text-[1.05rem] font-extrabold leading-snug text-ink">
-                                            {info.title}
-                                        </span>
-                                        <span className="mt-1 block text-[13px] font-medium leading-snug text-slate">
-                                            {info.hint}
-                                        </span>
-                                    </span>
-
-                                    <span
-                                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[15px] font-black ${
-                                            active
-                                                ? gold
-                                                    ? 'bg-[#1e2a78] text-white'
-                                                    : 'bg-primary text-white'
-                                                : 'bg-[#eef2f0] text-slate'
-                                        }`}
-                                    >
-                                        {active ? '✓' : '›'}
-                                    </span>
-                                </button>
-                            );
-                        })}
-                    </div>
-
-                    {/* Status under options — same place as old “selected” strip */}
-                    {monnayeurActive && (
-                        <div className="mt-4 rounded-2xl border border-emerald-200 bg-white px-4 py-4">
-                            <div className="flex items-center gap-3">
-                                {!complete ? (
-                                    <span className="relative flex h-11 w-11 shrink-0 items-center justify-center">
-                                        <span className="absolute inset-0 animate-ping rounded-full bg-primary/15" />
-                                        <span className="relative flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50">
-                                            <svg
-                                                className="h-5 w-5 animate-spin text-primary"
-                                                viewBox="0 0 24 24"
-                                                fill="none"
-                                                aria-hidden
-                                            >
-                                                <circle
-                                                    className="opacity-25"
-                                                    cx="12"
-                                                    cy="12"
-                                                    r="10"
-                                                    stroke="currentColor"
-                                                    strokeWidth="3"
-                                                />
-                                                <path
-                                                    className="opacity-90"
-                                                    fill="currentColor"
-                                                    d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"
-                                                />
-                                            </svg>
-                                        </span>
-                                    </span>
-                                ) : (
-                                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-lg font-black text-white">
-                                        ✓
-                                    </span>
-                                )}
-                                <div className="min-w-0 flex-1">
-                                    <p className="text-[14px] font-extrabold text-ink">
-                                        {complete ? t.payComplete : t.payInsertCash}
-                                    </p>
-                                    <p className="mt-0.5 text-[12px] font-medium text-slate">
-                                        {complete ? t.paySelected : t.payListening}
-                                    </p>
+                                    </div>
                                 </div>
                             </div>
+                        )}
 
-                            <div className="mt-3 grid grid-cols-2 gap-2">
-                                <div className="rounded-xl bg-emerald-50 px-3 py-2.5 text-center">
-                                    <p className="text-[11px] font-bold text-primary">{t.payInserted}</p>
-                                    <p className="mt-0.5 text-[1.05rem] font-black tabular-nums text-ink">
-                                        {formatMoney(inserted, locale)}
-                                    </p>
-                                </div>
-                                <div className="rounded-xl bg-[#f4faf7] px-3 py-2.5 text-center">
-                                    <p className="text-[11px] font-bold text-slate">{t.payRemaining}</p>
-                                    <p className="mt-0.5 text-[1.05rem] font-black tabular-nums text-ink">
-                                        {formatMoney(remaining, locale)}
-                                    </p>
+                        {screen === 'poste' && (
+                            <div className="rounded-3xl border border-[#1e2a78]/15 bg-white px-5 py-5">
+                                <p className="text-[1.15rem] font-black text-ink">{meta.algerie_poste.title}</p>
+                                <p className="mt-1 text-[13px] font-medium text-slate">{meta.algerie_poste.waiting}</p>
+                                <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-[#eef0f8]">
+                                    <div className={`h-full rounded-full bg-[#1e2a78] ${postePaid ? 'w-full' : 'w-2/3 animate-pulse'}`} />
                                 </div>
                             </div>
-
-                            <div className="mt-3">
-                                <div className="mb-1 flex items-center justify-between text-[11px] font-semibold text-slate">
-                                    <span>
-                                        {t.payDue}: {formatMoney(required, locale)}
-                                    </span>
-                                    <span>{Math.round(progress * 100)}%</span>
-                                </div>
-                                <div className="h-2.5 overflow-hidden rounded-full bg-emerald-100">
-                                    <div
-                                        className={`h-full rounded-full transition-all duration-500 ${
-                                            complete ? 'bg-primary' : 'bg-primary animate-pulse'
-                                        }`}
-                                        style={{ width: `${Math.max(progress * 100, complete ? 100 : 4)}%` }}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {posteActive && (
-                        <div className="mt-4 rounded-2xl border border-[#1e2a78]/20 bg-white px-4 py-3">
-                            <p className="text-[13px] font-extrabold text-ink">
-                                {postePaid ? t.payComplete : t.paySelected}
-                            </p>
-                            <p className="mt-1 text-[13px] font-medium text-slate">
-                                {postePaid ? t.payComplete : meta.algerie_poste.waiting}
-                            </p>
-                            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[#eef0f8]">
-                                <div
-                                    className={`h-full rounded-full bg-[#1e2a78] ${
-                                        postePaid ? 'w-full' : 'w-2/3 animate-pulse'
-                                    }`}
-                                />
-                            </div>
-                        </div>
-                    )}
-                </section>
+                        )}
+                    </section>
+                )}
             </div>
+            {paid && <PaidDialog title={t.payComplete} body={t.payDoneBody} amount={formatMoney(quote.amount, locale)} />}
         </PhoneShell>
+    );
+}
+
+function PaidDialog({ title, body, amount }) {
+    return (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-[#101513]/45 px-6">
+            <div className="w-full max-w-[320px] rounded-3xl bg-white px-6 py-8 text-center shadow-2xl" style={{ animation: 'metbati-pop 360ms ease-out' }}>
+                <style>{`@keyframes metbati-pop { from { transform: scale(.82); opacity: 0 } to { transform: scale(1); opacity: 1 } } @keyframes metbati-draw { to { stroke-dashoffset: 0 } }`}</style>
+                <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50">
+                    <svg viewBox="0 0 52 52" className="h-14 w-14 text-primary" aria-hidden>
+                        <circle cx="26" cy="26" r="22" fill="none" stroke="currentColor" strokeWidth="3" />
+                        <path
+                            d="M15 27l7 7 15-16"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="3.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeDasharray="48"
+                            strokeDashoffset="48"
+                            style={{ animation: 'metbati-draw 420ms 160ms ease-out forwards' }}
+                        />
+                    </svg>
+                </span>
+                <p className="mt-5 text-[1.25rem] font-black text-ink">{title}</p>
+                <p className="mt-1 text-[1.05rem] font-black text-primary">{amount}</p>
+                <p className="mt-2 text-[13px] font-medium leading-5 text-slate">{body}</p>
+            </div>
+        </div>
     );
 }
