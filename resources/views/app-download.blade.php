@@ -67,7 +67,7 @@
         <h1>Install the tablet app</h1>
         @if ($ready)
             <p>Open this page on the Android tablet, then install the kiosk app. The same link always has the latest build.</p>
-            <a class="install" href="{{ route('app.download.file') }}">Install Metbati</a>
+            <a class="install" href="{{ route('app.download.file') }}?v={{ $build }}">Install Metbati</a>
             <p class="meta">Updated {{ $updatedAt }} · {{ number_format($bytes / 1048576, 1) }} MB</p>
             <ol>
                 <li>Tap Install Metbati.</li>
