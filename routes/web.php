@@ -7,6 +7,7 @@ use App\Http\Controllers\AdminScreenController;
 use App\Http\Controllers\AdminStatusController;
 use App\Http\Controllers\KioskBroadcastController;
 use App\Http\Controllers\KioskCoinController;
+use App\Http\Controllers\KioskDeskController;
 use App\Http\Controllers\KioskPrintUnitController;
 use App\Http\Controllers\KioskPrintStatusController;
 use App\Http\Controllers\KioskScreenController;
@@ -54,6 +55,9 @@ Route::match(['GET', 'OPTIONS'], '/kiosk/{kiosk}/jobs/{job}', KioskPrintStatusCo
     ->name('kiosk.jobs.show');
 Route::post('/kiosk/{kiosk}/coins', KioskCoinController::class)
     ->name('kiosk.coins.store');
+Route::post('/kiosk/{kiosk}/desk', [KioskDeskController::class, 'publish'])->name('kiosk.desk.publish');
+
+Route::post('/print/desk', [KioskDeskController::class, 'claim'])->name('print.desk');
 
 Route::get('/print', [PrintJobController::class, 'create'])->name('print.create');
 Route::post('/print', [PrintJobController::class, 'store'])->name('print.store');

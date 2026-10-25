@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Events\PrintJobAwaitingPayment;
 use App\Events\PrintJobFailed;
 use App\Events\PrintJobPaid;
+use App\Jobs\ExpireUnpaidPrint;
 use App\Jobs\PrintKioskJob;
 use App\Models\PrintJob;
 use App\Models\PrintPage;
@@ -254,6 +255,7 @@ class PrintPaymentController extends Controller
         if ($result === 'awaiting' && $data['payment_method'] === 'monnayeur') {
             $job->refresh();
             $this->broadcastSafely(new PrintJobAwaitingPayment($job));
+            ExpireUnpaidPrint::dispatch($job->id)->delay(now()->addSeconds(90));
         }
 
         return redirect()

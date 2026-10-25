@@ -41,4 +41,32 @@ class PrintJobSession
 
         return is_string($id) && $id !== '' ? $id : null;
     }
+
+    public function grantDesk(string $kioskId): void
+    {
+        session(['print_desk' => ['kiosk_id' => $kioskId, 'open' => true]]);
+    }
+
+    public function hasDeskGrant(): bool
+    {
+        $desk = session('print_desk');
+        $kioskId = $this->kioskId();
+
+        return $kioskId !== null
+            && is_array($desk)
+            && ($desk['kiosk_id'] ?? '') === $kioskId
+            && ($desk['open'] ?? false) === true;
+    }
+
+    public function consumeDesk(): void
+    {
+        $desk = session('print_desk', []);
+
+        if (! is_array($desk)) {
+            return;
+        }
+
+        $desk['open'] = false;
+        session(['print_desk' => $desk]);
+    }
 }

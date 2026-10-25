@@ -2,6 +2,11 @@ export const copy = {
     ar: {
         brand: 'METBATI',
         step: (n) => `${n}/2`,
+        pinTitle: 'أدخل الرمز الظاهر على الشاشة',
+        pinHint: 'ثلاثة أرقام على يسار الشاشة، بجانب رمز الاستجابة.',
+        pinWrong: 'الرمز غير صحيح. انظر إلى الشاشة وحاول مرة أخرى.',
+        pinLimited: 'محاولات كثيرة. انتظر قليلاً ثم أعد المحاولة.',
+        pinRestart: 'ابدأ من جديد',
         chooseTitle: 'اختر ملفات الطباعة',
         chooseHint: 'اسمح بالوصول ثم حدّد الصور والمستندات من المعرض.',
         galleryTitle: 'المعرض',
@@ -96,6 +101,11 @@ export const copy = {
     fr: {
         brand: 'METBATI',
         step: (n) => `${n}/2`,
+        pinTitle: 'Entrez le code affiché à l’écran',
+        pinHint: 'Trois chiffres à gauche de l’écran, à côté du QR.',
+        pinWrong: 'Code incorrect. Regardez l’écran et réessayez.',
+        pinLimited: 'Trop d’essais. Patientez un moment, puis réessayez.',
+        pinRestart: 'Recommencer',
         chooseTitle: 'Sélectionnez vos fichiers',
         chooseHint: 'Autorisez l’accès, puis choisissez photos et documents dans la galerie.',
         galleryTitle: 'Galerie',

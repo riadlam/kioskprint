@@ -24,6 +24,8 @@ return [
     'simulate_monnayeur' => (bool) env('PRINT_SIMULATE_MONNAYEUR', true),
     /** Shared secret for the mini-PC coin agent. Empty rejects every coin. */
     'kiosk_coin_token' => env('KIOSK_COIN_TOKEN', ''),
+    /** Shared secret so only the tablet can publish the 3-digit desk code. */
+    'desk_token' => env('KIOSK_DESK_TOKEN', ''),
     /** Debug: Algérie Poste selection completes payment and starts the kiosk print. */
     'emulate_poste_paid' => (bool) env('PRINT_EMULATE_POSTE_PAID', true),
     /** windows prints on this machine; socket pushes each sheet to the mini PC; remote posts over HTTP; fake records units for tests. */

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Services\Print\KioskDeskCodes;
 use App\Models\CoinEvent;
 use App\Models\PrintDocument;
 use App\Models\PrintJob;
@@ -134,7 +135,12 @@ class PrintFlowTest extends TestCase
     public function test_print_create_captures_kiosk_id(): void
     {
         $this->get('/print?kiosk=kiosk-demo-1')
-            ->assertRedirect();
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->component('Print/Pin'));
+
+        $this->assertSame(0, PrintJob::query()->count());
+
+        $this->openAtKiosk('kiosk-demo-1');
 
         $job = PrintJob::query()->first();
         $this->assertNotNull($job);
@@ -146,7 +152,7 @@ class PrintFlowTest extends TestCase
         Storage::fake('local');
         config(['print.emulate_poste_paid' => true, 'queue.default' => 'sync']);
 
-        $this->get('/print?kiosk=kiosk-demo-2');
+        $this->openAtKiosk('kiosk-demo-2');
         $job = PrintJob::query()->first();
 
         $this->post('/print/'.$job->id.'/documents', [
@@ -169,7 +175,7 @@ class PrintFlowTest extends TestCase
     {
         Storage::fake('local');
 
-        $this->get('/print?kiosk=kiosk-demo-hold');
+        $this->openAtKiosk('kiosk-demo-hold');
         $job = PrintJob::query()->first();
         $this->assertSame(0, $job->documents()->count());
 
@@ -375,7 +381,7 @@ class PrintFlowTest extends TestCase
     {
         Storage::fake('local');
 
-        $this->get('/print?kiosk=kiosk-template-1')->assertRedirect();
+        $this->openAtKiosk('kiosk-template-1');
 
         $this->get(route('print.review', PrintJob::query()->first()))
             ->assertOk()
@@ -670,12 +676,20 @@ class PrintFlowTest extends TestCase
         ])->assertUnauthorized();
     }
 
+    private function openAtKiosk(string $kioskId): void
+    {
+        app(KioskDeskCodes::class)->publish($kioskId, '246');
+        $this->get('/print?kiosk='.$kioskId)->assertOk();
+        $this->post('/print/desk', ['code' => '246'])->assertRedirect(route('print.create'));
+        $this->get('/print?kiosk='.$kioskId)->assertRedirect();
+    }
+
     /**
      * @param  list<string>  $names
      */
     private function jobWithImages(string $kioskId, array $names): PrintJob
     {
-        $this->get('/print?kiosk='.$kioskId);
+        $this->openAtKiosk($kioskId);
         $job = PrintJob::query()->first();
 
         $this->post('/print/'.$job->id.'/documents', [
@@ -699,7 +713,7 @@ class PrintFlowTest extends TestCase
 
     private function anotherReview(string $kioskId, array $names): PrintJob
     {
-        $this->get('/print?kiosk='.$kioskId);
+        $this->openAtKiosk($kioskId);
         $job = PrintJob::query()->where('status', 'reviewing')->latest()->first();
         $this->assertNotNull($job);
 

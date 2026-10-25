@@ -21,9 +21,13 @@ class PrintJobController extends Controller
         private PrintTemplateCatalog $templates,
     ) {}
 
-    public function create(Request $request): RedirectResponse
+    public function create(Request $request): RedirectResponse|Response
     {
         $this->session->captureKioskFromRequest($request);
+
+        if ($pin = $this->pinScreen()) {
+            return $pin;
+        }
 
         $ids = session('print_job_ids', []);
 
@@ -50,13 +54,18 @@ class PrintJobController extends Controller
         ]);
 
         $this->session->remember($job);
+        $this->session->consumeDesk();
 
         return redirect()->route('print.review', $job);
     }
 
-    public function store(StorePrintFilesRequest $request): RedirectResponse
+    public function store(StorePrintFilesRequest $request): RedirectResponse|Response
     {
         $this->session->captureKioskFromRequest($request);
+
+        if ($pin = $this->pinScreen()) {
+            return $pin;
+        }
 
         $job = PrintJob::query()->create([
             'locale' => $request->locale(),
@@ -74,6 +83,7 @@ class PrintJobController extends Controller
         }
 
         $this->session->remember($job);
+        $this->session->consumeDesk();
 
         return redirect()->route('print.review', $job);
     }
@@ -128,5 +138,30 @@ class PrintJobController extends Controller
             'templates' => $this->templates->forClient(),
             'templatePrice' => (float) config('print.template_price_per_page'),
         ]);
+    }
+
+    private function pinScreen(): ?Response
+    {
+        if ($this->session->kioskId() === null || $this->session->hasDeskGrant() || $this->ownsReviewingJob()) {
+            return null;
+        }
+
+        return Inertia::render('Print/Pin', [
+            'kioskId' => $this->session->kioskId(),
+        ]);
+    }
+
+    private function ownsReviewingJob(): bool
+    {
+        $ids = session('print_job_ids', []);
+
+        if ($ids === []) {
+            return false;
+        }
+
+        return PrintJob::query()
+            ->whereIn('id', $ids)
+            ->where('status', 'reviewing')
+            ->exists();
     }
 }

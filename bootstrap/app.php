@@ -20,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         $middleware->validateCsrfTokens(except: [
             'kiosk/*/coins',
+            'kiosk/*/desk',
             'kiosk/broadcasting/auth',
             'kiosk/*/ready',
             'kiosk/*/units/*',
