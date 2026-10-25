@@ -2,15 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\KioskPc;
 use App\Models\PrintJob;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 use Inertia\Response;
-use Throwable;
 
 class AdminDashboardController extends Controller
 {
@@ -25,10 +21,8 @@ class AdminDashboardController extends Controller
         return Inertia::render('Admin/Dashboard', [
             'authed' => true,
             'email' => (string) config('app.admin_email'),
-            'health' => $this->health(),
             'summary' => $this->summary(),
             'jobs' => $this->jobs(),
-            'kiosks' => $this->kiosks(),
         ]);
     }
 
@@ -66,50 +60,6 @@ class AdminDashboardController extends Controller
     }
 
     /**
-     * @return list<array{name: string, ok: bool, detail: string}>
-     */
-    private function health(): array
-    {
-        $checks = [];
-
-        try {
-            DB::select('select 1 as ok');
-            $checks[] = ['name' => 'Database', 'ok' => true, 'detail' => 'MySQL is answering'];
-        } catch (Throwable) {
-            $checks[] = ['name' => 'Database', 'ok' => false, 'detail' => 'MySQL did not answer'];
-        }
-
-        $writable = is_writable(storage_path('app'));
-        $checks[] = [
-            'name' => 'Storage',
-            'ok' => $writable,
-            'detail' => $writable ? 'Print files can be saved' : 'Storage is not writable',
-        ];
-
-        $pending = Schema::hasTable('jobs') ? DB::table('jobs')->count() : 0;
-        $failed = Schema::hasTable('failed_jobs') ? DB::table('failed_jobs')->count() : 0;
-        $checks[] = [
-            'name' => 'Queue',
-            'ok' => $failed === 0,
-            'detail' => $pending.' waiting, '.$failed.' failed',
-        ];
-
-        $port = (int) config('reverb.servers.reverb.port', 8080);
-        $socket = @fsockopen('127.0.0.1', $port, $errno, $errstr, 0.4);
-        $live = is_resource($socket);
-        if ($live) {
-            fclose($socket);
-        }
-        $checks[] = [
-            'name' => 'Live updates',
-            'ok' => $live,
-            'detail' => $live ? 'Reverb is listening on port '.$port : 'Reverb is not listening on port '.$port,
-        ];
-
-        return $checks;
-    }
-
-    /**
      * @return array{jobs: int, printed: int, failed: int, open: int, revenue: float}
      */
     private function summary(): array
@@ -126,26 +76,6 @@ class AdminDashboardController extends Controller
             'open' => (int) $byStatus->except(['printed', 'failed'])->sum(),
             'revenue' => (float) PrintJob::query()->where('status', 'printed')->sum('amount'),
         ];
-    }
-
-    /**
-     * @return list<array{kiosk_id: string, last_error: ?string}>
-     */
-    private function kiosks(): array
-    {
-        if (! Schema::hasTable('kiosk_pcs')) {
-            return [];
-        }
-
-        $rows = KioskPc::query()->get()->keyBy('kiosk_id');
-        $ids = $rows->keys()->merge(
-            PrintJob::query()->whereNotNull('kiosk_id')->distinct()->pluck('kiosk_id'),
-        )->unique()->sort()->values();
-
-        return $ids->map(fn ($id) => [
-            'kiosk_id' => (string) $id,
-            'last_error' => $rows->get($id)?->last_error,
-        ])->all();
     }
 
     /**

@@ -1,7 +1,5 @@
-import { Head, useForm, usePage } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import AdminShell from '../../Components/Admin/Shell';
-import { kioskEcho } from '../../lib/kioskEcho';
 
 const STATUS = {
     reviewing: { label: 'Reviewing', tone: 'bg-slate-100 text-slate-700' },
@@ -20,17 +18,15 @@ function money(amount) {
     return new Intl.NumberFormat('fr-DZ', { maximumFractionDigits: 0 }).format(amount || 0);
 }
 
-export default function Dashboard({ authed, email = '', health = [], summary = {}, jobs = [], kiosks = [] }) {
+export default function Dashboard({ authed, email = '', summary = {}, jobs = [] }) {
     if (!authed) {
         return <Login />;
     }
 
-    const open = health.filter((check) => check.ok).length;
-
     return (
         <AdminShell
             title="Dashboard"
-            subtitle={`${open} of ${health.length} systems healthy`}
+            subtitle="Jobs and takings"
             active="overview"
             email={email}
         >
@@ -41,21 +37,13 @@ export default function Dashboard({ authed, email = '', health = [], summary = {
                             <Stat label="Collected" value={`${money(summary.revenue)} DA`} note="Printed jobs" />
                         </section>
 
-                        <KioskPcs initial={kiosks} />
-
-                        <section id="health" className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                            {health.map((check) => (
-                                <article key={check.name} className="rounded-xl border border-black/5 bg-white px-4 py-4 shadow-sm">
-                                    <div className="flex items-center justify-between gap-3">
-                                        <h2 className="text-[13px] font-semibold">{check.name}</h2>
-                                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${check.ok ? 'bg-emerald-50 text-emerald-800' : 'bg-red-50 text-red-700'}`}>
-                                            {check.ok ? 'Healthy' : 'Down'}
-                                        </span>
-                                    </div>
-                                    <p className="mt-2 text-[13px] leading-5 text-slate">{check.detail}</p>
-                                </article>
-                            ))}
-                        </section>
+                        <Link href="/admin/status" className="mt-6 flex items-center justify-between gap-4 rounded-xl border border-black/5 bg-[#101513] px-5 py-4 text-white shadow-sm">
+                            <span>
+                                <span className="block text-[15px] font-semibold">Floor status</span>
+                                <span className="mt-0.5 block text-[13px] text-white/60">What is up, what is resting, and why. Uptime included.</span>
+                            </span>
+                            <span className="text-[13px] font-semibold text-emerald-300">Open</span>
+                        </Link>
 
                         <section id="jobs" className="mt-6 overflow-hidden rounded-xl border border-black/5 bg-white shadow-sm">
                             <div className="flex items-end justify-between gap-4 border-b border-black/5 px-5 py-4">
@@ -109,134 +97,6 @@ export default function Dashboard({ authed, email = '', health = [], summary = {
                         </section>
         </AdminShell>
     );
-}
-
-function KioskPcs({ initial }) {
-    const [rows, setRows] = useState(initial);
-    const [online, setOnline] = useState([]);
-    const [link, setLink] = useState('checking');
-
-    useEffect(() => {
-        const echo = kioskEcho();
-
-        if (!echo) {
-            setLink('missing');
-            return undefined;
-        }
-
-        const connection = echo.connector.pusher.connection;
-        const onOpen = () => setLink('open');
-        const onDown = () => setLink('down');
-        connection.bind('connected', onOpen);
-        connection.bind('unavailable', onDown);
-        connection.bind('failed', onDown);
-        connection.bind('disconnected', onDown);
-
-        const presence = echo.join('kiosk-pcs');
-        const idsOf = (members) => {
-            const found = [];
-            const take = (member) => {
-                const id = member?.id;
-                if (id && id !== 'desk') {
-                    found.push(id);
-                }
-            };
-            if (Array.isArray(members)) {
-                members.forEach(take);
-            } else if (members && typeof members.each === 'function') {
-                members.each(take);
-            }
-            return found;
-        };
-        const addRow = (id) => {
-            setRows((current) => (current.some((row) => row.kiosk_id === id)
-                ? current
-                : [...current, { kiosk_id: id, last_error: null }]));
-        };
-
-        presence.here((members) => {
-            const ids = idsOf(members);
-            setOnline(ids);
-            ids.forEach(addRow);
-        });
-        presence.joining((member) => {
-            if (!member?.id || member.id === 'desk') {
-                return;
-            }
-            addRow(member.id);
-            setOnline((current) => (current.includes(member.id) ? current : [...current, member.id]));
-        });
-        presence.leaving((member) => {
-            if (!member?.id) {
-                return;
-            }
-            setOnline((current) => current.filter((id) => id !== member.id));
-        });
-
-        echo.private('admin-kiosks').listen('.KioskPcChanged', (event) => {
-            setRows((current) => {
-                const next = current.map((row) => (row.kiosk_id === event.kiosk_id
-                    ? { ...row, last_error: event.last_error }
-                    : row));
-                if (next.some((row) => row.kiosk_id === event.kiosk_id)) {
-                    return next;
-                }
-                return [...next, { kiosk_id: event.kiosk_id, last_error: event.last_error }];
-            });
-        });
-
-        return () => {
-            connection.unbind('connected', onOpen);
-            connection.unbind('unavailable', onDown);
-            connection.unbind('failed', onDown);
-            connection.unbind('disconnected', onDown);
-            echo.disconnect();
-        };
-    }, []);
-
-    return (
-        <section id="kiosks" className="mt-6">
-            <div className="mb-3 flex items-end justify-between gap-4">
-                <div>
-                    <h2 className="text-[15px] font-semibold">Kiosk PCs</h2>
-                    <p className="mt-0.5 text-[13px] text-slate">Live from the mini PC socket.</p>
-                </div>
-                <LinkNote link={link} />
-            </div>
-            {rows.length === 0 && (
-                <article className="rounded-xl border border-black/5 bg-white px-4 py-4 text-[13px] text-slate shadow-sm">
-                    No kiosk PC has connected yet.
-                </article>
-            )}
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                {rows.map((row) => {
-                    const connected = link === 'open' && online.includes(row.kiosk_id);
-                    const label = link === 'open' ? (connected ? 'Online' : 'Offline') : 'Waiting';
-                    const tone = connected ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-100 text-slate-700';
-                    return (
-                        <article key={row.kiosk_id} className="rounded-xl border border-black/5 bg-white px-4 py-4 shadow-sm">
-                            <div className="flex items-center justify-between gap-3">
-                                <h3 className="truncate font-mono text-[12px] font-semibold">{row.kiosk_id}</h3>
-                                <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${tone}`}>{label}</span>
-                            </div>
-                            <p className="mt-2 text-[13px] leading-5 text-slate">{row.last_error || 'No error'}</p>
-                        </article>
-                    );
-                })}
-            </div>
-        </section>
-    );
-}
-
-function LinkNote({ link }) {
-    const text = {
-        checking: 'Connecting',
-        open: 'Live',
-        down: 'Live link down',
-        missing: 'Live key missing',
-    }[link];
-
-    return <p className="text-[12px] text-slate">{text}</p>;
 }
 
 function Stat({ label, value, note }) {

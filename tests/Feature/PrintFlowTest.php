@@ -653,7 +653,8 @@ class PrintFlowTest extends TestCase
                 ->component('Admin/Dashboard')
                 ->where('authed', true)
                 ->where('email', 'admin@metbati.com')
-                ->has('health', 4)
+                ->missing('health')
+                ->missing('kiosks')
                 ->where('summary.printed', 1)
                 ->where('jobs.0.kiosk_id', 'kiosk-admin')
                 ->where('jobs.0.status', 'printed'));

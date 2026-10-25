@@ -151,7 +151,10 @@ class KioskSocketTest extends TestCase
             return $event->payload['unit_id'] === $unit->id
                 && str_contains($event->payload['url'], '/file');
         });
-        $this->assertNotNull(KioskPc::query()->where('kiosk_id', 'kiosk-abc')->first());
+        $pc = KioskPc::query()->where('kiosk_id', 'kiosk-abc')->first();
+        $this->assertNotNull($pc);
+        $this->assertNotNull($pc->last_seen_at);
+        $this->assertNotNull($pc->connected_since);
     }
 
     /**

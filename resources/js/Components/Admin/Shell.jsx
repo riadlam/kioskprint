@@ -2,8 +2,8 @@ import { Head, Link, router } from '@inertiajs/react';
 
 const LINKS = [
     { id: 'overview', href: '/admin', label: 'Overview' },
+    { id: 'status', href: '/admin/status', label: 'Status' },
     { id: 'jobs', href: '/admin#jobs', label: 'Print jobs' },
-    { id: 'health', href: '/admin#health', label: 'System health' },
     { id: 'screen', href: '/admin/screen', label: 'Screen' },
 ];
 

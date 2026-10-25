@@ -4,6 +4,7 @@ use App\Http\Controllers\AdminBroadcastController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AppDownloadController;
 use App\Http\Controllers\AdminScreenController;
+use App\Http\Controllers\AdminStatusController;
 use App\Http\Controllers\KioskBroadcastController;
 use App\Http\Controllers\KioskCoinController;
 use App\Http\Controllers\KioskPrintUnitController;
@@ -30,6 +31,7 @@ Route::post('/admin/logout', [AdminDashboardController::class, 'logout'])->name(
 Route::post('/admin/broadcasting/auth', AdminBroadcastController::class)->name('admin.broadcast');
 
 Route::middleware('admin')->group(function () {
+    Route::get('/admin/status', [AdminStatusController::class, 'show'])->name('admin.status');
     Route::get('/admin/screen', [AdminScreenController::class, 'show'])->name('admin.screen');
     Route::put('/admin/screen', [AdminScreenController::class, 'update'])->name('admin.screen.update');
     Route::post('/admin/screen/videos', [AdminScreenController::class, 'store'])->name('admin.screen.videos.store');

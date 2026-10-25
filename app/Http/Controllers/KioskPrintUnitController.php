@@ -19,7 +19,7 @@ class KioskPrintUnitController extends Controller
         $this->token($request);
         $this->kioskId($kiosk);
 
-        KioskPc::query()->updateOrCreate(['kiosk_id' => $kiosk], []);
+        KioskPc::query()->firstOrNew(['kiosk_id' => $kiosk])->markConnected();
         $this->relay->releasePending($kiosk);
 
         return response()->json(['ok' => true]);
@@ -46,6 +46,8 @@ class KioskPrintUnitController extends Controller
             'ok' => ['required', 'boolean'],
             'error' => ['nullable', 'string', 'max:500'],
         ]);
+
+        KioskPc::query()->where('kiosk_id', $kiosk)->update(['last_seen_at' => now()]);
 
         return response()->json($this->relay->finish(
             $unit,
