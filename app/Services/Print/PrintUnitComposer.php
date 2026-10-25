@@ -141,7 +141,7 @@ class PrintUnitComposer
         }
 
         $jpeg = $spoolDir.DIRECTORY_SEPARATOR.'page-'.$page['id'].'.jpg';
-        imagejpeg($image, $jpeg, 90);
+        imagejpeg($image, $jpeg, 80);
         imagedestroy($image);
 
         return $jpeg;
@@ -180,6 +180,31 @@ class PrintUnitComposer
         imagecopy($flat, $image, 0, 0, 0, 0, $width, $height);
         imagedestroy($image);
 
-        return $flat;
+        return $this->fitForPrint($flat);
+    }
+
+    /**
+     * A phone photo is far larger than the Canon can use. A4 at 200 dpi
+     * is enough, and the smaller file reaches the mini PC much faster.
+     */
+    private function fitForPrint(\GdImage $image): \GdImage
+    {
+        $maxW = 1654;
+        $maxH = 2339;
+        $width = imagesx($image);
+        $height = imagesy($image);
+        $scale = min($maxW / max(1, $width), $maxH / max(1, $height), 1);
+
+        if ($scale > 0.98) {
+            return $image;
+        }
+
+        $nextW = max(1, (int) round($width * $scale));
+        $nextH = max(1, (int) round($height * $scale));
+        $small = imagecreatetruecolor($nextW, $nextH);
+        imagecopyresampled($small, $image, 0, 0, 0, 0, $nextW, $nextH, $width, $height);
+        imagedestroy($image);
+
+        return $small;
     }
 }
