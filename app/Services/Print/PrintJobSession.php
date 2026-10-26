@@ -32,7 +32,23 @@ class PrintJobSession
 
     public function captureKioskFromRequest(Request $request): void
     {
-        $this->captureKiosk($request->query('kiosk', $request->input('kiosk')));
+        $given = $request->query('kiosk', $request->input('kiosk'));
+
+        if (is_string($given) && trim($given) !== '') {
+            $this->captureKiosk($given);
+
+            return;
+        }
+
+        if ($this->kioskId() !== null) {
+            return;
+        }
+
+        $public = config('print.public_kiosk_id');
+
+        if (is_string($public)) {
+            $this->captureKiosk($public);
+        }
     }
 
     public function kioskId(): ?string

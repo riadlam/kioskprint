@@ -14,6 +14,23 @@ class DeskCodeTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_a_plain_print_link_binds_the_public_kiosk(): void
+    {
+        config(['print.public_kiosk_id' => 'kiosk-metbati-01']);
+        app(KioskDeskCodes::class)->publish('kiosk-metbati-01', '246');
+
+        $this->get('/print')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('Print/Pin')
+                ->where('kioskId', 'kiosk-metbati-01'));
+
+        $this->post('/print/desk', ['code' => '246'])->assertRedirect(route('print.create'));
+        $this->get('/print')->assertRedirect();
+
+        $this->assertSame('kiosk-metbati-01', PrintJob::query()->value('kiosk_id'));
+    }
+
     public function test_a_wrong_code_does_not_open_a_job(): void
     {
         app(KioskDeskCodes::class)->publish('kiosk-metbati-01', '246');

@@ -26,6 +26,11 @@ return [
     'kiosk_coin_token' => env('KIOSK_COIN_TOKEN', ''),
     /** Shared secret so only the tablet can publish the 3-digit desk code. */
     'desk_token' => env('KIOSK_DESK_TOKEN', ''),
+    /**
+     * Kiosk bound to a plain /print visit. The address people type and scan
+     * stays https://metbati.com/print; this id is stored in the session.
+     */
+    'public_kiosk_id' => env('PRINT_PUBLIC_KIOSK', 'kiosk-metbati-01'),
     /** Debug: Algérie Poste selection completes payment and starts the kiosk print. */
     'emulate_poste_paid' => (bool) env('PRINT_EMULATE_POSTE_PAID', true),
     /** windows prints on this machine; socket pushes each sheet to the mini PC; remote posts over HTTP; fake records units for tests. */

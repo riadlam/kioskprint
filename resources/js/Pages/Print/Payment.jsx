@@ -282,7 +282,7 @@ export default function Payment({ job, quote, methods }) {
                                 <p className="mt-4 text-[1.25rem] font-black text-ink">{t.payFailedTitle}</p>
                                 <p className="mt-2 text-[13px] font-medium leading-5 text-slate">{t.payFailedBody}</p>
                                 <Link
-                                    href={`/print?kiosk=${encodeURIComponent(job.kiosk_id || '')}`}
+                                    href="/print"
                                     className="mt-5 inline-flex h-12 items-center justify-center rounded-2xl bg-primary px-5 text-[15px] font-black text-white"
                                 >
                                     {t.pinRestart}
