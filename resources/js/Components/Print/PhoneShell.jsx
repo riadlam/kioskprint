@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { usePage } from '@inertiajs/react';
 import { copy } from '../../lib/printCopy';
 
 export default function PhoneShell({
@@ -10,6 +12,7 @@ export default function PhoneShell({
     chrome = true,
 }) {
     const t = copy[locale] || copy.ar;
+    useOrderTimeout();
 
     return (
         <div
@@ -37,6 +40,52 @@ export default function PhoneShell({
             </div>
         </div>
     );
+}
+
+function useOrderTimeout() {
+    const minutes = Number(usePage().props.printSessionMinutes) || 10;
+
+    useEffect(() => {
+        const path = window.location.pathname;
+        if (path === '/print' || path === '/print/') {
+            return undefined;
+        }
+
+        const limit = minutes * 60 * 1000;
+        let touched = Date.now();
+        let timer = 0;
+
+        const leave = () => {
+            window.location.replace('/print');
+        };
+        const arm = () => {
+            window.clearTimeout(timer);
+            timer = window.setTimeout(leave, limit);
+        };
+        const mark = () => {
+            touched = Date.now();
+            arm();
+        };
+        const onReturn = () => {
+            if (document.visibilityState === 'visible' && Date.now() - touched >= limit) {
+                leave();
+            }
+        };
+
+        arm();
+        window.addEventListener('pointerdown', mark);
+        window.addEventListener('keydown', mark);
+        document.addEventListener('visibilitychange', onReturn);
+        window.addEventListener('pageshow', onReturn);
+
+        return () => {
+            window.clearTimeout(timer);
+            window.removeEventListener('pointerdown', mark);
+            window.removeEventListener('keydown', mark);
+            document.removeEventListener('visibilitychange', onReturn);
+            window.removeEventListener('pageshow', onReturn);
+        };
+    }, [minutes]);
 }
 
 export function LangToggle({ locale, onLocale }) {

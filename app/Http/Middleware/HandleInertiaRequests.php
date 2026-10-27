@@ -38,6 +38,7 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'appName' => config('app.name', 'Metbati'),
+            'printSessionMinutes' => (int) config('print.session_minutes', 10),
             'flash' => [
                 'payment_started' => $request->session()->get('payment_started'),
             ],
