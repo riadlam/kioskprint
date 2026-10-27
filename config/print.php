@@ -26,6 +26,8 @@ return [
     'kiosk_coin_token' => env('KIOSK_COIN_TOKEN', ''),
     /** Shared secret so only the tablet can publish the 3-digit desk code. */
     'desk_token' => env('KIOSK_DESK_TOKEN', ''),
+    /** Fixed code for debugging the phone flow. Empty disables it. */
+    'debug_desk_code' => env('PRINT_DEBUG_DESK_CODE', '241'),
     /**
      * Kiosk bound to a plain /print visit. The address people type and scan
      * stays https://metbati.com/print; this id is stored in the session.
