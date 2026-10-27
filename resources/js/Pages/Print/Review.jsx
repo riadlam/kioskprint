@@ -233,13 +233,13 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
     }
 
     function movePage(fromId, toId) {
-        if (!fromId || !toId || fromId === toId) {
+        if (!fromId || !toId || String(fromId) === String(toId)) {
             return;
         }
 
         setPages((current) => {
-            const from = current.findIndex((page) => page.id === fromId);
-            const to = current.findIndex((page) => page.id === toId);
+            const from = current.findIndex((page) => String(page.id) === String(fromId));
+            const to = current.findIndex((page) => String(page.id) === String(toId));
             if (from < 0 || to < 0) {
                 return current;
             }
@@ -361,9 +361,11 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
         didDragRef.current = true;
         setDraggingId(dragIdRef.current);
 
-        const el = document.elementFromPoint(event.clientX, event.clientY);
-        const card = el?.closest?.('[data-page-id]');
-        const overId = card ? Number(card.getAttribute('data-page-id')) : null;
+        const stack = document.elementsFromPoint(event.clientX, event.clientY);
+        const card = stack
+            .map((el) => el.closest?.('[data-page-id]'))
+            .find((el) => el && el.getAttribute('data-page-id') !== String(dragIdRef.current));
+        const overId = card?.getAttribute('data-page-id');
         if (overId) {
             movePage(dragIdRef.current, overId);
         }
@@ -573,7 +575,12 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
                                 return (
                                     <div
                                         key={page.id}
-                                        className={`overflow-hidden bg-white ${
+                                        data-page-id={page.id}
+                                        onPointerDown={(event) => onCardPointerDown(event, page.id)}
+                                        onPointerMove={onCardPointerMove}
+                                        onPointerUp={(event) => onCardPointerUp(event, page.id)}
+                                        onPointerCancel={(event) => onCardPointerUp(event, page.id)}
+                                        className={`touch-none overflow-hidden bg-white ${
                                             isDragging
                                                 ? 'z-20 scale-[1.03] opacity-90 shadow-lg ring-2 ring-primary'
                                                 : isActive
@@ -581,14 +588,7 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
                                                     : 'border border-emerald-900/10'
                                         }`}
                                     >
-                                        <div
-                                            data-page-id={page.id}
-                                            onPointerDown={(event) => onCardPointerDown(event, page.id)}
-                                            onPointerMove={onCardPointerMove}
-                                            onPointerUp={(event) => onCardPointerUp(event, page.id)}
-                                            onPointerCancel={(event) => onCardPointerUp(event, page.id)}
-                                            className="relative aspect-[210/297] touch-none"
-                                        >
+                                        <div className="relative aspect-[210/297]">
                                             <div className="absolute inset-0">
                                                 <PageThumb
                                                     document={page.document}
