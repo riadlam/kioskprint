@@ -31,25 +31,43 @@ function loadScript(src) {
 
 function waitForOpenCv() {
     return new Promise((resolve, reject) => {
-        const deadline = Date.now() + 30000;
+        let settled = false;
+        let hooked = false;
+        const deadline = window.setTimeout(() => {
+            if (settled) {
+                return;
+            }
+            settled = true;
+            reject(new Error('opencv'));
+        }, 30000);
 
         const finish = (cv) => {
-            window.cv = cv;
-            resolve(cv);
+            if (settled) {
+                return;
+            }
+            const ready = cv || window.cv;
+            if (!ready || typeof ready.Mat !== 'function') {
+                window.setTimeout(check, 40);
+                return;
+            }
+            settled = true;
+            window.clearTimeout(deadline);
+            window.cv = ready;
+            resolve(ready);
         };
 
         const check = () => {
+            if (settled) {
+                return;
+            }
             const cv = window.cv;
             if (cv && typeof cv.Mat === 'function') {
                 finish(cv);
                 return;
             }
-            if (cv && typeof cv.then === 'function') {
-                cv.then(finish).catch(reject);
-                return;
-            }
-            if (Date.now() > deadline) {
-                reject(new Error('opencv'));
+            if (cv && typeof cv.then === 'function' && !hooked) {
+                hooked = true;
+                cv.then((ready) => finish(ready));
                 return;
             }
             window.setTimeout(check, 40);
@@ -65,6 +83,9 @@ export function loadScannerEngine() {
             await loadScript('/scanner/opencv.js');
             await waitForOpenCv();
             await loadScript('/scanner/jscanify.js');
+            if (typeof window.jscanify !== 'function') {
+                throw new Error('jscanify');
+            }
             return new window.jscanify();
         })().catch((error) => {
             enginePromise = null;

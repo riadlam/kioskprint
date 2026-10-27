@@ -13,6 +13,25 @@ import { ACCEPT, countPdfPages, isAndroid, isPdfFile, isSupported, isTooBig, mak
 const ACCESS_KEY = 'metbati.file-access';
 const LOCALE_KEY = 'metbati.print.locale';
 
+function AddFileIcon() {
+    return (
+        <svg viewBox="0 0 24 24" className="h-6 w-6 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+            <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" strokeLinejoin="round" />
+            <path d="M14 3v5h5" strokeLinejoin="round" />
+            <path d="M12 11v6M9 14h6" strokeLinecap="round" />
+        </svg>
+    );
+}
+
+function ScanIcon() {
+    return (
+        <svg viewBox="0 0 24 24" className="h-6 w-6 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+            <path d="M4 8V5h3M16 5h3v3M20 16v3h-3M8 19H5v-3" strokeLinecap="round" strokeLinejoin="round" />
+            <circle cx="12" cy="12" r="3.2" />
+        </svg>
+    );
+}
+
 function withIndex(list) {
     return list.map((page, index) => ({ ...page, index: index + 1 }));
 }
@@ -368,17 +387,19 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
                             type="button"
                             onClick={requestPick}
                             disabled={form.processing || fileCount >= limits.max_files}
-                            className="flex h-12 items-center justify-center rounded-xl border border-primary bg-emerald-50 px-2 text-[12px] font-extrabold text-primary disabled:opacity-40"
+                            className="flex h-14 items-center justify-center gap-2 rounded-xl border border-primary bg-emerald-50 px-2 text-[12px] font-extrabold leading-tight text-primary disabled:opacity-40"
                         >
+                            <AddFileIcon />
                             {t.addNew}
                         </button>
                         <button
                             type="button"
                             onClick={() => setScanning(true)}
                             disabled={form.processing || fileCount >= limits.max_files}
-                            className="flex h-12 items-center justify-center rounded-xl border border-primary bg-white px-2 text-[12px] font-extrabold text-primary disabled:opacity-40"
+                            className="flex h-14 items-center justify-center gap-2 rounded-xl border border-primary bg-white px-2 text-[12px] font-extrabold leading-tight text-primary disabled:opacity-40"
                         >
-                            {t.scanShort}
+                            <ScanIcon />
+                            {t.scanAction}
                         </button>
                     </div>
 
