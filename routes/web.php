@@ -64,18 +64,20 @@ Route::post('/kiosk/{kiosk}/coins', KioskCoinController::class)
     ->name('kiosk.coins.store');
 Route::post('/kiosk/{kiosk}/desk', [KioskDeskController::class, 'publish'])->name('kiosk.desk.publish');
 
-Route::post('/print/desk', [KioskDeskController::class, 'claim'])->name('print.desk');
+Route::middleware('print.session')->group(function () {
+    Route::post('/print/desk', [KioskDeskController::class, 'claim'])->name('print.desk');
 
-Route::get('/print', [PrintJobController::class, 'create'])->name('print.create');
-Route::post('/print', [PrintJobController::class, 'store'])->name('print.store');
-Route::post('/print/templates', [PrintTemplateController::class, 'store'])->name('print.templates.store');
-Route::get('/print/{job}', [PrintJobController::class, 'show'])->name('print.review');
-Route::post('/print/{job}/checkout', [PrintPaymentController::class, 'begin'])->name('print.checkout');
-Route::post('/print/{job}/hold', [PrintPaymentController::class, 'hold'])->name('print.hold');
-Route::get('/print/{job}/pay', [PrintPaymentController::class, 'show'])->name('print.pay');
-Route::post('/print/{job}/pay', [PrintPaymentController::class, 'store'])->name('print.pay.store');
-Route::get('/print/{job}/pay/status', [PrintPaymentController::class, 'status'])->name('print.pay.status');
-Route::post('/print/{job}/documents', [PrintDocumentController::class, 'store'])->name('print.documents.store');
-Route::delete('/print/{job}/documents/{document}', [PrintDocumentController::class, 'destroy'])->name('print.documents.destroy');
-Route::get('/print/{job}/documents/{document}/file', [PrintDocumentController::class, 'file'])->name('print.documents.file');
-Route::delete('/print/{job}/pages/{page}', [PrintPageController::class, 'destroy'])->name('print.pages.destroy');
+    Route::get('/print', [PrintJobController::class, 'create'])->name('print.create');
+    Route::post('/print', [PrintJobController::class, 'store'])->name('print.store');
+    Route::post('/print/templates', [PrintTemplateController::class, 'store'])->name('print.templates.store');
+    Route::get('/print/{job}', [PrintJobController::class, 'show'])->name('print.review');
+    Route::post('/print/{job}/checkout', [PrintPaymentController::class, 'begin'])->name('print.checkout');
+    Route::post('/print/{job}/hold', [PrintPaymentController::class, 'hold'])->name('print.hold');
+    Route::get('/print/{job}/pay', [PrintPaymentController::class, 'show'])->name('print.pay');
+    Route::post('/print/{job}/pay', [PrintPaymentController::class, 'store'])->name('print.pay.store');
+    Route::get('/print/{job}/pay/status', [PrintPaymentController::class, 'status'])->name('print.pay.status');
+    Route::post('/print/{job}/documents', [PrintDocumentController::class, 'store'])->name('print.documents.store');
+    Route::delete('/print/{job}/documents/{document}', [PrintDocumentController::class, 'destroy'])->name('print.documents.destroy');
+    Route::get('/print/{job}/documents/{document}/file', [PrintDocumentController::class, 'file'])->name('print.documents.file');
+    Route::delete('/print/{job}/pages/{page}', [PrintPageController::class, 'destroy'])->name('print.pages.destroy');
+});

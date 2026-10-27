@@ -47,6 +47,24 @@ class DeskCodeTest extends TestCase
         $this->assertTrue(app(KioskDeskCodes::class)->take('kiosk-metbati-01', '246'));
     }
 
+    public function test_an_idle_phone_must_enter_a_new_code(): void
+    {
+        config(['print.session_minutes' => 10, 'print.public_kiosk_id' => 'kiosk-metbati-01']);
+        app(KioskDeskCodes::class)->publish('kiosk-metbati-01', '246');
+
+        $this->get('/print');
+        $this->post('/print/desk', ['code' => '246'])->assertRedirect(route('print.create'));
+        $this->get('/print')->assertRedirect();
+
+        $this->travel(9)->minutes();
+        $this->get('/print')->assertRedirect();
+
+        $this->travel(11)->minutes();
+        $this->get('/print')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->component('Print/Pin'));
+    }
+
     public function test_a_wrong_code_does_not_open_a_job(): void
     {
         app(KioskDeskCodes::class)->publish('kiosk-metbati-01', '246');

@@ -11,7 +11,31 @@ class PrintJobSession
     {
         $ids = session('print_job_ids', []);
         $ids[] = $job->id;
-        session(['print_job_ids' => array_values(array_unique($ids))]);
+        session([
+            'print_job_ids' => array_values(array_unique($ids)),
+            'print_seen_at' => now()->getTimestamp(),
+        ]);
+    }
+
+    public function expireIfIdle(): void
+    {
+        $ids = session('print_job_ids', []);
+        $hasAccess = $this->hasDeskGrant() || (is_array($ids) && $ids !== []);
+
+        if (! $hasAccess) {
+            return;
+        }
+
+        $seen = session('print_seen_at');
+        $limit = max(1, (int) config('print.session_minutes', 10)) * 60;
+
+        if (is_numeric($seen) && (now()->getTimestamp() - (int) $seen) >= $limit) {
+            session()->forget(['print_desk', 'print_job_ids', 'print_seen_at']);
+
+            return;
+        }
+
+        session(['print_seen_at' => now()->getTimestamp()]);
     }
 
     public function owns(PrintJob $job): bool
@@ -60,7 +84,10 @@ class PrintJobSession
 
     public function grantDesk(string $kioskId): void
     {
-        session(['print_desk' => ['kiosk_id' => $kioskId, 'open' => true]]);
+        session([
+            'print_desk' => ['kiosk_id' => $kioskId, 'open' => true],
+            'print_seen_at' => now()->getTimestamp(),
+        ]);
     }
 
     public function hasDeskGrant(): bool

@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         $middleware->alias([
             'admin' => \App\Http\Middleware\EnsureAdmin::class,
+            'print.session' => \App\Http\Middleware\ExpireIdlePrintSession::class,
         ]);
         $middleware->validateCsrfTokens(except: [
             'kiosk/*/coins',

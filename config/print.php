@@ -28,6 +28,8 @@ return [
     'desk_token' => env('KIOSK_DESK_TOKEN', ''),
     /** Fixed code for debugging the phone flow. Empty disables it. */
     'debug_desk_code' => env('PRINT_DEBUG_DESK_CODE', '241'),
+    /** Phone order access ends after this many minutes without a page request. */
+    'session_minutes' => 10,
     /**
      * Kiosk bound to a plain /print visit. The address people type and scan
      * stays https://metbati.com/print; this id is stored in the session.
