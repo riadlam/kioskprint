@@ -2,10 +2,9 @@ import { Head, router, useForm } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import A4PagePreview from '../../Components/Print/A4PagePreview';
 import AccessSheet from '../../Components/Print/AccessSheet';
-import DuplexIcon from '../../Components/Print/DuplexIcon';
+import DocumentScanner from '../../Components/Print/DocumentScanner';
 import PageThumb from '../../Components/Print/PageThumb';
 import PhoneShell from '../../Components/Print/PhoneShell';
-import SimplexIcon from '../../Components/Print/SimplexIcon';
 import TemplatePicker from '../../Components/Print/TemplatePicker';
 import { copy } from '../../lib/printCopy';
 import { clearDraft, mimeOf, pagesFromDraft, readDraft, saveDraft } from '../../lib/localPrintDraft';
@@ -36,6 +35,7 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
     const [uploadPercent, setUploadPercent] = useState(null);
     const [draggingId, setDraggingId] = useState(null);
     const [checkingOut, setCheckingOut] = useState(false);
+    const [scanning, setScanning] = useState(false);
     const [templatesOpen, setTemplatesOpen] = useState(false);
     const [templateBusy, setTemplateBusy] = useState(null);
     const form = useForm({ locale: job.locale, files: [] });
@@ -124,13 +124,17 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
         }
 
         setNotice('');
+        await addAccepted(accepted);
+    }
+
+    async function addAccepted(accepted) {
         if (serverBacked) {
             form.transform((data) => ({ ...data, locale, files: accepted }));
             form.post(`/print/${job.id}/documents`, { forceFormData: true, preserveScroll: true });
             return;
         }
 
-        const draft = (await readDraft(job.id)) || { duplex, files: [], pages: [] };
+        const draft = (await readDraft(job.id)) || { duplex: false, files: [], pages: [] };
         const additions = [];
         for (const file of accepted) {
             let pageCount = 1;
@@ -149,7 +153,7 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
             }
         }
         draft.pages = [...draft.pages, ...additions];
-        draft.duplex = duplex;
+        draft.duplex = false;
         await saveDraft(job.id, draft);
         const next = pagesFromDraft(draft);
         pagesRef.current = next;
@@ -181,19 +185,6 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
             pagesRef.current = next;
             return next;
         });
-    }
-
-    function setDuplexMode(next) {
-        setDuplex(next);
-        if (!serverBacked) {
-            readDraft(job.id).then((draft) => {
-                if (!draft) {
-                    return;
-                }
-                draft.duplex = next;
-                saveDraft(job.id, draft);
-            });
-        }
     }
 
     function movePage(fromId, toId) {
@@ -247,7 +238,7 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
                 `/print/${job.id}/checkout`,
                 {
                     page_ids: pagesRef.current.map((page) => page.id),
-                    duplex,
+                    duplex: false,
                 },
                 {
                     onFinish: () => setCheckingOut(false),
@@ -280,7 +271,7 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
             }
             form.transform(() => ({
                 locale,
-                duplex,
+                duplex: false,
                 files: uploadFiles,
                 selection,
             }));
@@ -348,6 +339,10 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
         }
     }
 
+    const fileCount = serverBacked
+        ? job.documents.length
+        : new Set(pages.map((page) => page.fileKey)).size;
+
     return (
         <PhoneShell
             locale={locale}
@@ -371,30 +366,19 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
                     <div className="mb-2 grid grid-cols-2 gap-2">
                         <button
                             type="button"
-                            onClick={() => setDuplexMode(false)}
-                            className={`flex h-12 items-center justify-center gap-2 rounded-xl border px-2 transition ${
-                                !duplex
-                                    ? 'border-primary bg-emerald-50 text-primary shadow-sm'
-                                    : 'border-emerald-900/10 bg-white text-slate'
-                            }`}
-                            aria-pressed={!duplex}
+                            onClick={requestPick}
+                            disabled={form.processing || fileCount >= limits.max_files}
+                            className="flex h-12 items-center justify-center rounded-xl border border-primary bg-emerald-50 px-2 text-[12px] font-extrabold text-primary disabled:opacity-40"
                         >
-                            <SimplexIcon className="h-6 w-6 shrink-0" active={!duplex} />
-                            <span className="text-[12px] font-extrabold leading-tight">{t.simplexLabel}</span>
+                            {t.addNew}
                         </button>
-
                         <button
                             type="button"
-                            onClick={() => setDuplexMode(true)}
-                            className={`flex h-12 items-center justify-center gap-2 rounded-xl border px-2 transition ${
-                                duplex
-                                    ? 'border-primary bg-emerald-50 text-primary shadow-sm'
-                                    : 'border-emerald-900/10 bg-white text-slate'
-                            }`}
-                            aria-pressed={duplex}
+                            onClick={() => setScanning(true)}
+                            disabled={form.processing || fileCount >= limits.max_files}
+                            className="flex h-12 items-center justify-center rounded-xl border border-primary bg-white px-2 text-[12px] font-extrabold text-primary disabled:opacity-40"
                         >
-                            <DuplexIcon className="h-6 w-6 shrink-0" active={duplex} />
-                            <span className="text-[12px] font-extrabold leading-tight">{t.duplexLabel}</span>
+                            {t.scanShort}
                         </button>
                     </div>
 
@@ -590,6 +574,15 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
                     mode={sheet}
                     onClose={() => setSheet(null)}
                     onContinue={openPicker}
+                />
+            )}
+            {scanning && (
+                <DocumentScanner
+                    locale={locale}
+                    copy={t}
+                    room={Math.max(0, limits.max_files - fileCount)}
+                    onClose={() => setScanning(false)}
+                    onPage={(file) => addAccepted([file])}
                 />
             )}
         </PhoneShell>
