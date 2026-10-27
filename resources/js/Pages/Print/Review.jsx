@@ -39,9 +39,6 @@ function withIndex(list) {
 export default function Review({ job, limits, templates = [], templatePrice = 50 }) {
     const fileInputRef = useRef(null);
     const autoPickRef = useRef(false);
-    const dragIdRef = useRef(null);
-    const pointerStartRef = useRef(null);
-    const didDragRef = useRef(false);
     const pagesRef = useRef([]);
 
     const [locale, setLocale] = useState(() => sessionStorage.getItem(LOCALE_KEY) || job.locale || 'ar');
@@ -52,7 +49,6 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
     const serverBacked = (job.pages || []).length > 0;
     const [pages, setPages] = useState(() => withIndex(job.pages || []));
     const [uploadPercent, setUploadPercent] = useState(null);
-    const [draggingId, setDraggingId] = useState(null);
     const [checkingOut, setCheckingOut] = useState(false);
     const [scanBusy, setScanBusy] = useState(false);
     const [templatesOpen, setTemplatesOpen] = useState(false);
@@ -232,36 +228,6 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
         });
     }
 
-    function movePage(fromId, toId) {
-        if (!fromId || !toId || String(fromId) === String(toId)) {
-            return;
-        }
-
-        setPages((current) => {
-            const from = current.findIndex((page) => String(page.id) === String(fromId));
-            const to = current.findIndex((page) => String(page.id) === String(toId));
-            if (from < 0 || to < 0) {
-                return current;
-            }
-            const next = [...current];
-            const [item] = next.splice(from, 1);
-            next.splice(to, 0, item);
-            const ordered = withIndex(next);
-            if (!serverBacked) {
-                readDraft(job.id).then((draft) => {
-                    if (!draft) {
-                        return;
-                    }
-                    const byId = new Map(draft.pages.map((page) => [page.id, page]));
-                    draft.pages = ordered.map((page) => byId.get(page.id)).filter(Boolean);
-                    draft.duplex = duplex;
-                    saveDraft(job.id, draft);
-                });
-            }
-            return ordered;
-        });
-    }
-
     function chooseTemplate(id) {
         if (templateBusy) {
             return;
@@ -331,60 +297,6 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
                 },
             });
         });
-    }
-
-    function onCardPointerDown(event, pageId) {
-        if (event.button != null && event.button !== 0) {
-            return;
-        }
-        if (event.target.closest('[data-no-drag]')) {
-            return;
-        }
-
-        dragIdRef.current = pageId;
-        didDragRef.current = false;
-        pointerStartRef.current = { x: event.clientX, y: event.clientY };
-        event.currentTarget.setPointerCapture?.(event.pointerId);
-    }
-
-    function onCardPointerMove(event) {
-        if (!dragIdRef.current || !pointerStartRef.current) {
-            return;
-        }
-
-        const dx = event.clientX - pointerStartRef.current.x;
-        const dy = event.clientY - pointerStartRef.current.y;
-        if (!didDragRef.current && Math.hypot(dx, dy) < 8) {
-            return;
-        }
-
-        didDragRef.current = true;
-        setDraggingId(dragIdRef.current);
-
-        const stack = document.elementsFromPoint(event.clientX, event.clientY);
-        const card = stack
-            .map((el) => el.closest?.('[data-page-id]'))
-            .find((el) => el && el.getAttribute('data-page-id') !== String(dragIdRef.current));
-        const overId = card?.getAttribute('data-page-id');
-        if (overId) {
-            movePage(dragIdRef.current, overId);
-        }
-    }
-
-    function onCardPointerUp(event, pageId) {
-        if (!dragIdRef.current) {
-            return;
-        }
-
-        const wasDragging = didDragRef.current;
-        dragIdRef.current = null;
-        pointerStartRef.current = null;
-        setDraggingId(null);
-        event.currentTarget.releasePointerCapture?.(event.pointerId);
-
-        if (!wasDragging) {
-            setFocus(pageId);
-        }
     }
 
     const sheetCount = pages.reduce((sum, page) => sum + (Number(page.copies) || 1), 0);
@@ -534,7 +446,7 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
                     </div>
                 )}
 
-                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-1.5">
+                <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain p-1.5">
                     {pages.length === 0 ? (
                         <button
                             type="button"
@@ -570,25 +482,20 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
                         <div className="grid grid-cols-4 gap-1">
                             {pages.map((page) => {
                                 const isActive = active?.id === page.id;
-                                const isDragging = draggingId === page.id;
 
                                 return (
                                     <div
                                         key={page.id}
-                                        data-page-id={page.id}
-                                        onPointerDown={(event) => onCardPointerDown(event, page.id)}
-                                        onPointerMove={onCardPointerMove}
-                                        onPointerUp={(event) => onCardPointerUp(event, page.id)}
-                                        onPointerCancel={(event) => onCardPointerUp(event, page.id)}
-                                        className={`touch-none overflow-hidden bg-white ${
-                                            isDragging
-                                                ? 'z-20 scale-[1.03] opacity-90 shadow-lg ring-2 ring-primary'
-                                                : isActive
-                                                    ? 'ring-2 ring-primary ring-offset-1 ring-offset-[#eef7f2]'
-                                                    : 'border border-emerald-900/10'
+                                        className={`overflow-hidden bg-white ${
+                                            isActive
+                                                ? 'ring-2 ring-primary ring-offset-1 ring-offset-[#eef7f2]'
+                                                : 'border border-emerald-900/10'
                                         }`}
                                     >
-                                        <div className="relative aspect-[210/297]">
+                                        <div
+                                            onClick={() => setFocus(page.id)}
+                                            className="relative aspect-[210/297]"
+                                        >
                                             <div className="absolute inset-0">
                                                 <PageThumb
                                                     document={page.document}
@@ -599,19 +506,8 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
                                             <span className="pointer-events-none absolute start-1 top-1 bg-primary px-1 py-0.5 font-mono text-[9px] font-semibold text-white">
                                                 {page.index}
                                             </span>
-                                            <span className="pointer-events-none absolute bottom-1 start-1 flex h-4 w-4 items-center justify-center bg-ink/70 text-white">
-                                                <svg className="h-2.5 w-2.5" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
-                                                    <circle cx="5" cy="4" r="1.2" />
-                                                    <circle cx="11" cy="4" r="1.2" />
-                                                    <circle cx="5" cy="8" r="1.2" />
-                                                    <circle cx="11" cy="8" r="1.2" />
-                                                    <circle cx="5" cy="12" r="1.2" />
-                                                    <circle cx="11" cy="12" r="1.2" />
-                                                </svg>
-                                            </span>
                                             <button
                                                 type="button"
-                                                data-no-drag
                                                 aria-label={t.remove}
                                                 onClick={(event) => {
                                                     event.stopPropagation();
@@ -665,13 +561,10 @@ function CopyStepper({ value, max, onChange, lessLabel, moreLabel }) {
 
     return (
         <div
-            data-no-drag
             className="flex items-stretch border-t border-emerald-900/10 bg-white"
-            onPointerDown={(event) => event.stopPropagation()}
         >
             <button
                 type="button"
-                data-no-drag
                 aria-label={lessLabel}
                 disabled={value <= 1}
                 onClick={(event) => {
@@ -687,7 +580,6 @@ function CopyStepper({ value, max, onChange, lessLabel, moreLabel }) {
             </span>
             <button
                 type="button"
-                data-no-drag
                 aria-label={moreLabel}
                 disabled={value >= max}
                 onClick={(event) => {
