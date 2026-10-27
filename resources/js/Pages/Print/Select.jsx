@@ -235,7 +235,7 @@ export default function Select({ limits }) {
                             disabled={!canScan}
                             className="border border-white/25 bg-white/10 px-3 py-2 text-[11px] font-semibold text-white disabled:opacity-40"
                         >
-                            {t.scanAction}
+                            {scanBusy ? t.scanPreparing : t.scanAction}
                         </button>
                         {items.length > 0 && (
                             <button
@@ -298,7 +298,7 @@ export default function Select({ limits }) {
                                 disabled={!canScan}
                                 className="mt-4 h-12 w-full max-w-xs bg-white text-[14px] font-semibold text-primary disabled:opacity-40"
                             >
-                                {t.scanAction}
+                                {scanBusy ? t.scanPreparing : t.scanAction}
                             </button>
                         </div>
                     )}
@@ -319,7 +319,7 @@ export default function Select({ limits }) {
                                 disabled={!canScan}
                                 className="text-[11px] font-semibold text-primary disabled:opacity-40"
                             >
-                                {t.scanAction}
+                                {scanBusy ? t.scanPreparing : t.scanAction}
                             </button>
                             <button
                                 type="button"
@@ -359,7 +359,7 @@ export default function Select({ limits }) {
                                 disabled={!canScan}
                                 className="mt-5 h-12 w-full max-w-xs bg-primary text-[13px] font-semibold text-white disabled:opacity-40"
                             >
-                                {t.scanAction}
+                                {scanBusy ? t.scanPreparing : t.scanAction}
                             </button>
                             <button
                                 type="button"

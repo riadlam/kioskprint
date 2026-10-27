@@ -417,7 +417,7 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
                             className="flex h-14 items-center justify-center gap-2 rounded-xl border border-primary bg-white px-2 text-[12px] font-extrabold leading-tight text-primary disabled:opacity-40"
                         >
                             <ScanIcon />
-                            {t.scanAction}
+                            {scanBusy ? t.scanPreparing : t.scanAction}
                         </button>
                     </div>
 

@@ -1,10 +1,37 @@
-export async function scanPages(locale) {
-    const { setLicenseKey, scanWithConfiguration } = await import('@thegrizzlylabs/web-geniusscan-sdk');
-    const key = import.meta.env.VITE_GENIUS_SCAN_LICENSE_KEY;
+let sdkPromise;
+let licensePromise;
 
-    if (key) {
-        await setLicenseKey(key);
+function loadSdk() {
+    if (!sdkPromise) {
+        sdkPromise = import('@thegrizzlylabs/web-geniusscan-sdk').then((sdk) => {
+            const key = import.meta.env.VITE_GENIUS_SCAN_LICENSE_KEY;
+
+            if (key && !licensePromise) {
+                licensePromise = sdk.setLicenseKey(key).catch((error) => {
+                    console.error(error);
+                });
+            }
+
+            return sdk;
+        });
     }
+
+    return sdkPromise;
+}
+
+export function prepareScanner() {
+    const start = () => loadSdk();
+
+    if (typeof requestIdleCallback === 'function') {
+        requestIdleCallback(start, { timeout: 1200 });
+        return;
+    }
+
+    start();
+}
+
+export async function scanPages(locale) {
+    const { scanWithConfiguration } = await loadSdk();
 
     const result = await scanWithConfiguration({
         source: 'camera',
