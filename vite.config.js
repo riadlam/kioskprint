@@ -18,9 +18,22 @@ function pdfjsAssets() {
     };
 }
 
+function scannerAssets() {
+    return {
+        name: 'scanner-assets',
+        buildStart() {
+            const dest = path.resolve('public/scanner');
+            fs.mkdirSync(dest, { recursive: true });
+            fs.copyFileSync(path.resolve('node_modules/jscanify/src/opencv.js'), path.join(dest, 'opencv.js'));
+            fs.copyFileSync(path.resolve('node_modules/jscanify/src/jscanify.js'), path.join(dest, 'jscanify.js'));
+        },
+    };
+}
+
 export default defineConfig({
     plugins: [
         pdfjsAssets(),
+        scannerAssets(),
         laravel({
             input: ['resources/css/app.css', 'resources/js/app.jsx'],
             refresh: true,

@@ -1,6 +1,7 @@
 import { Head, useForm } from '@inertiajs/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import AccessSheet from '../../Components/Print/AccessSheet';
+import DocumentScanner from '../../Components/Print/DocumentScanner';
 import LocalAssetPreview from '../../Components/Print/LocalAssetPreview';
 import PhoneShell from '../../Components/Print/PhoneShell';
 import { copy } from '../../lib/printCopy';
@@ -27,6 +28,7 @@ export default function Select({ limits }) {
     const [notice, setNotice] = useState('');
     const [sheet, setSheet] = useState(null);
     const [accessGranted, setAccessGranted] = useState(() => sessionStorage.getItem(ACCESS_KEY) === '1');
+    const [scanning, setScanning] = useState(false);
     const form = useForm({ locale: 'ar', files: [] });
     const t = copy[locale];
     const mb = Math.round(limits.max_kilobytes / 1024);
@@ -158,6 +160,7 @@ export default function Select({ limits }) {
 
     const serverErrors = Object.values(form.errors);
     const canContinue = selected.length > 0 && !reading && !form.processing;
+    const canScan = items.length < limits.max_files;
     const cta = form.processing
         ? t.uploading
         : reading
@@ -208,13 +211,23 @@ export default function Select({ limits }) {
                         <p className="mt-0.5 text-[11px] text-white/75">{t.chooseHint}</p>
                     </div>
                     {items.length > 0 && (
-                        <button
-                            type="button"
-                            onClick={requestAccess}
-                            className="border border-white/25 bg-white/10 px-3 py-2 text-[11px] font-semibold text-white"
-                        >
-                            {t.importShort}
-                        </button>
+                        <div className="flex gap-1.5">
+                            <button
+                                type="button"
+                                onClick={() => setScanning(true)}
+                                disabled={!canScan}
+                                className="border border-white/25 bg-white/10 px-3 py-2 text-[11px] font-semibold text-white disabled:opacity-40"
+                            >
+                                {t.scanShort}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={requestAccess}
+                                className="border border-white/25 bg-white/10 px-3 py-2 text-[11px] font-semibold text-white"
+                            >
+                                {t.importShort}
+                            </button>
+                        </div>
                     )}
                 </div>
 
@@ -273,13 +286,23 @@ export default function Select({ limits }) {
                         <p className="text-[10px] text-slate">{t.previewHint}</p>
                     </div>
                     {items.length > 0 && (
-                        <button
-                            type="button"
-                            onClick={requestAccess}
-                            className="text-[11px] font-semibold text-primary"
-                        >
-                            + {t.importShort}
-                        </button>
+                        <div className="flex items-center gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setScanning(true)}
+                                disabled={!canScan}
+                                className="text-[11px] font-semibold text-primary disabled:opacity-40"
+                            >
+                                {t.scanShort}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={requestAccess}
+                                className="text-[11px] font-semibold text-primary"
+                            >
+                                + {t.importShort}
+                            </button>
+                        </div>
                     )}
                 </div>
 
@@ -310,6 +333,14 @@ export default function Select({ limits }) {
                                 className="mt-5 h-12 w-full max-w-xs bg-primary text-[13px] font-semibold text-white"
                             >
                                 {t.grantAccess}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setScanning(true)}
+                                disabled={!canScan}
+                                className="mt-2 h-12 w-full max-w-xs border border-primary text-[13px] font-semibold text-primary disabled:opacity-40"
+                            >
+                                {t.scanButton}
                             </button>
                             <p className="mt-3 text-[10px] font-medium text-primary/80">{t.formats}</p>
                         </div>
@@ -370,6 +401,15 @@ export default function Select({ limits }) {
                     mode={sheet}
                     onClose={() => setSheet(null)}
                     onContinue={openPicker}
+                />
+            )}
+            {scanning && (
+                <DocumentScanner
+                    locale={locale}
+                    copy={t}
+                    room={Math.max(0, limits.max_files - items.length)}
+                    onClose={() => setScanning(false)}
+                    onPage={acceptFiles}
                 />
             )}
         </PhoneShell>
