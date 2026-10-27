@@ -10,6 +10,7 @@ use App\Events\PrintJobProgress;
 use App\Models\KioskPc;
 use App\Models\KioskPrintUnit;
 use App\Models\PrintJob;
+use App\Models\PrintSetting;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
@@ -152,6 +153,7 @@ class KioskPrintRelay
             'job_id' => $unit->print_job_id,
             'kiosk_id' => $unit->kiosk_id,
             'duplex' => (bool) $unit->duplex,
+            'toner_save' => PrintSetting::current()->toner_save,
             'url' => URL::temporarySignedRoute('kiosk.units.file', now()->addMinutes(10), [
                 'kiosk' => $unit->kiosk_id,
                 'unit' => $unit->id,

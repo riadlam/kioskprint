@@ -18,7 +18,7 @@ function money(amount) {
     return new Intl.NumberFormat('fr-DZ', { maximumFractionDigits: 0 }).format(amount || 0);
 }
 
-export default function Dashboard({ authed, email = '', summary = {}, jobs = [] }) {
+export default function Dashboard({ authed, email = '', summary = {}, jobs = [], tonerSave = false }) {
     if (!authed) {
         return <Login />;
     }
@@ -36,6 +36,8 @@ export default function Dashboard({ authed, email = '', summary = {}, jobs = [] 
                             <Stat label="Still open" value={summary.open ?? 0} note="Waiting to finish" />
                             <Stat label="Collected" value={`${money(summary.revenue)} DA`} note="Printed jobs" />
                         </section>
+
+                        <TonerSaver enabled={tonerSave} />
 
                         <Link href="/admin/status" className="mt-6 flex items-center justify-between gap-4 rounded-xl border border-black/5 bg-[#101513] px-5 py-4 text-white shadow-sm">
                             <span>
@@ -96,6 +98,37 @@ export default function Dashboard({ authed, email = '', summary = {}, jobs = [] 
                             </div>
                         </section>
         </AdminShell>
+    );
+}
+
+function TonerSaver({ enabled }) {
+    const form = useForm({});
+
+    function toggle() {
+        form.transform(() => ({ toner_save: !enabled }));
+        form.post('/admin/print-settings', { preserveScroll: true });
+    }
+
+    return (
+        <section className="mt-6 flex items-center justify-between gap-4 rounded-xl border border-black/5 bg-white px-5 py-4 shadow-sm">
+            <div>
+                <h2 className="text-[15px] font-semibold">Toner saver</h2>
+                <p className="mt-0.5 max-w-xl text-[13px] text-slate">Lighter prints on the Canon, so a cartridge lasts longer. Pages look a little lighter. Off until you turn it on.</p>
+            </div>
+            <button
+                type="button"
+                role="switch"
+                aria-checked={enabled}
+                disabled={form.processing}
+                onClick={toggle}
+                className={`relative h-7 w-12 shrink-0 rounded-full transition disabled:opacity-60 ${
+                    enabled ? 'bg-emerald-600' : 'bg-slate-200'
+                }`}
+            >
+                <span className="sr-only">Toner saver</span>
+                <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition ${enabled ? 'start-6' : 'start-1'}`} />
+            </button>
+        </section>
     );
 }
 

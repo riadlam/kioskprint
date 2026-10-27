@@ -34,6 +34,7 @@ Route::post('/admin/logout', [AdminDashboardController::class, 'logout'])->name(
 Route::post('/admin/broadcasting/auth', AdminBroadcastController::class)->name('admin.broadcast');
 
 Route::middleware('admin')->group(function () {
+    Route::post('/admin/print-settings', [AdminDashboardController::class, 'updatePrintSettings'])->name('admin.print-settings');
     Route::get('/admin/status', [AdminStatusController::class, 'show'])->name('admin.status');
     Route::get('/admin/screen', [AdminScreenController::class, 'show'])->name('admin.screen');
     Route::put('/admin/screen', [AdminScreenController::class, 'update'])->name('admin.screen.update');

@@ -208,6 +208,29 @@ class PrintFlowTest extends TestCase
                 ->where('quote.amount', 40));
     }
 
+    public function test_a_gallery_page_can_be_printed_more_than_once(): void
+    {
+        Storage::fake('local');
+
+        $this->openAtKiosk('kiosk-copies');
+        $job = PrintJob::query()->first();
+
+        $this->post(route('print.hold', $job), [
+            'locale' => 'ar',
+            'duplex' => false,
+            'files' => [UploadedFile::fake()->image('photo.jpg')],
+            'selection' => ['0:1:3'],
+        ])->assertRedirect(route('print.pay', $job));
+
+        $this->assertSame(3, (int) $job->pages()->value('copies'));
+
+        $this->get(route('print.pay', $job))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('quote.page_count', 3)
+                ->where('quote.amount', 60));
+    }
+
     public function test_checkout_saves_order_and_duplex_then_opens_payment(): void
     {
         Storage::fake('local');

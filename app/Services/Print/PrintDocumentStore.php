@@ -108,7 +108,7 @@ class PrintDocumentStore
      * Called when they pay, so review stays on the phone.
      *
      * @param  array<int, UploadedFile>  $files
-     * @param  list<array{0: int, 1: int}>  $selection
+     * @param  list<array{0: int, 1: int, 2?: int}>  $selection
      */
     public function hold(PrintJob $job, array $files, array $selection, string $locale): void
     {
@@ -170,11 +170,15 @@ class PrintDocumentStore
 
                 $rows = [];
                 $now = now();
-                foreach ($selection as $position => [$fileIndex, $pageNumber]) {
+                $maxCopies = max(1, (int) config('print.max_copies', 10));
+                foreach ($selection as $position => $chosen) {
+                    [$fileIndex, $pageNumber] = $chosen;
+                    $copies = max(1, min($maxCopies, (int) ($chosen[2] ?? 1)));
                     $rows[] = [
                         'print_document_id' => $documents[$fileIndex]->id,
                         'number' => $pageNumber,
                         'position' => $position + 1,
+                        'copies' => $copies,
                         'created_at' => $now,
                         'updated_at' => $now,
                     ];
@@ -191,8 +195,9 @@ class PrintDocumentStore
 
     /**
      * @param  array<int, int|string>  $pageIds
+     * @param  array<int, int>  $copies
      */
-    public function reorder(PrintJob $job, array $pageIds): void
+    public function reorder(PrintJob $job, array $pageIds, array $copies = []): void
     {
         $ownedIds = $job->pages()->pluck('print_pages.id')->map(fn ($id) => (int) $id)->all();
         $incoming = array_map('intval', $pageIds);
@@ -207,11 +212,17 @@ class PrintDocumentStore
             ]);
         }
 
-        DB::transaction(function () use ($incoming) {
+        $maxCopies = max(1, (int) config('print.max_copies', 10));
+
+        DB::transaction(function () use ($incoming, $copies, $maxCopies) {
             foreach ($incoming as $index => $pageId) {
-                PrintPage::query()->whereKey($pageId)->update([
-                    'position' => $index + 1,
-                ]);
+                $update = ['position' => $index + 1];
+
+                if (array_key_exists($index, $copies)) {
+                    $update['copies'] = max(1, min($maxCopies, (int) $copies[$index]));
+                }
+
+                PrintPage::query()->whereKey($pageId)->update($update);
             }
         });
     }

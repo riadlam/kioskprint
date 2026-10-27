@@ -2,6 +2,7 @@
 
 return [
     'max_files' => 20,
+    'max_copies' => 10,
     'max_kilobytes' => 12288,
     'extensions' => ['pdf', 'jpg', 'jpeg', 'png', 'webp'],
     'mimes' => [

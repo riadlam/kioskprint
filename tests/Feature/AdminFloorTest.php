@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\CoinEvent;
+use App\Models\PrintSetting;
 use App\Models\KioskPc;
 use App\Models\KioskPrintUnit;
 use App\Models\PrintJob;
@@ -23,6 +24,27 @@ class AdminFloorTest extends TestCase
             'app.admin_email' => 'admin@metbati.com',
             'app.admin_password' => 'secret',
         ]);
+    }
+
+    public function test_toner_saver_stays_off_until_an_admin_turns_it_on(): void
+    {
+        $this->post('/admin/print-settings', ['toner_save' => true])->assertRedirect(route('admin'));
+
+        $this->post('/admin/login', [
+            'email' => 'admin@metbati.com',
+            'password' => 'secret',
+        ]);
+
+        $this->get('/admin')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('tonerSave', false));
+
+        $this->post('/admin/print-settings', ['toner_save' => true])->assertRedirect();
+        $this->assertTrue(PrintSetting::current()->toner_save);
+
+        $this->get('/admin')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('tonerSave', true));
     }
 
     public function test_status_keeps_a_successful_print_resting_and_retires_old_kiosks(): void

@@ -166,12 +166,17 @@ class PrintKioskJob implements ShouldBeUnique, ShouldQueue
                 throw new \RuntimeException('A saved file is missing.');
             }
 
-            $ordered[] = [
+            $sheet = [
                 'id' => (int) $page->id,
                 'absolute_path' => $absolute,
                 'mime' => (string) $document->mime_type,
                 'number' => (int) $page->number,
             ];
+            $copies = max(1, (int) ($page->copies ?? 1));
+
+            for ($copy = 0; $copy < $copies; $copy++) {
+                $ordered[] = $sheet;
+            }
         }
 
         return $ordered;

@@ -8,7 +8,7 @@ class PrintPricing
 {
     public function quote(PrintJob $job): array
     {
-        $pages = $job->pages()->count();
+        $pages = (int) $job->pages()->sum('copies');
         $unit = $job->unit_price !== null
             ? (float) $job->unit_price
             : (float) config('print.price_per_page');

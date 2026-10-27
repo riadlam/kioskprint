@@ -105,7 +105,7 @@ class PrintJobController extends Controller
                 'locale' => $job->locale,
                 'kiosk_id' => $job->kiosk_id,
                 'duplex' => (bool) $job->duplex,
-                'total_pages' => $orderedPages->count(),
+                'total_pages' => (int) $orderedPages->sum('copies'),
                 'documents' => $job->documents->map(fn ($document) => [
                     'id' => $document->id,
                     'name' => $document->original_name,
@@ -120,6 +120,7 @@ class PrintJobController extends Controller
                         'id' => $page->id,
                         'number' => $page->number,
                         'position' => $page->position,
+                        'copies' => max(1, (int) $page->copies),
                         'index' => $index + 1,
                         'document' => [
                             'id' => $document->id,
@@ -134,6 +135,7 @@ class PrintJobController extends Controller
             'limits' => [
                 'max_files' => (int) config('print.max_files'),
                 'max_kilobytes' => (int) config('print.max_kilobytes'),
+                'max_copies' => (int) config('print.max_copies', 10),
             ],
             'templates' => $this->templates->forClient(),
             'templatePrice' => (float) config('print.template_price_per_page'),

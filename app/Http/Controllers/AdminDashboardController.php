@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\PrintJob;
+use App\Models\PrintSetting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -23,7 +24,21 @@ class AdminDashboardController extends Controller
             'email' => (string) config('app.admin_email'),
             'summary' => $this->summary(),
             'jobs' => $this->jobs(),
+            'tonerSave' => PrintSetting::current()->toner_save,
         ]);
+    }
+
+    public function updatePrintSettings(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'toner_save' => ['required', 'boolean'],
+        ]);
+
+        PrintSetting::current()->update([
+            'toner_save' => (bool) $data['toner_save'],
+        ]);
+
+        return back();
     }
 
     public function login(Request $request): RedirectResponse

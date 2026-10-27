@@ -11,6 +11,7 @@ class PrintPage extends Model
         'print_document_id',
         'number',
         'position',
+        'copies',
     ];
 
     public function document(): BelongsTo

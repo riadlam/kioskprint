@@ -168,7 +168,7 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
             const type = mimeOf(file);
             draft.files.push({ key, name: file.name, type, pages: pageCount, file });
             for (let number = 1; number <= pageCount; number += 1) {
-                additions.push({ id: `${key}-${number}`, fileKey: key, number });
+                additions.push({ id: `${key}-${number}`, fileKey: key, number, copies: 1 });
             }
         }
         draft.pages = [...draft.pages, ...additions];
@@ -178,6 +178,32 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
         pagesRef.current = next;
         setPages(next);
         setFocus(additions[0]?.id || null);
+    }
+
+    function setCopies(pageId, copies) {
+        const max = Math.max(1, Number(limits.max_copies) || 10);
+        const nextCount = Math.min(max, Math.max(1, copies));
+
+        setPages((current) => {
+            const next = current.map((page) => (
+                page.id === pageId ? { ...page, copies: nextCount } : page
+            ));
+            pagesRef.current = next;
+
+            if (!serverBacked) {
+                readDraft(job.id).then((draft) => {
+                    if (!draft) {
+                        return;
+                    }
+                    draft.pages = draft.pages.map((page) => (
+                        page.id === pageId ? { ...page, copies: nextCount } : page
+                    ));
+                    saveDraft(job.id, draft);
+                });
+            }
+
+            return next;
+        });
     }
 
     function removePage(pageId) {
@@ -257,6 +283,7 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
                 `/print/${job.id}/checkout`,
                 {
                     page_ids: pagesRef.current.map((page) => page.id),
+                    copies: pagesRef.current.map((page) => Number(page.copies) || 1),
                     duplex: false,
                 },
                 {
@@ -282,7 +309,7 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
                     indexByKey.set(page.fileKey, uploadFiles.length);
                     uploadFiles.push(stored.file);
                 }
-                selection.push(`${indexByKey.get(page.fileKey)}:${page.number}`);
+                selection.push(`${indexByKey.get(page.fileKey)}:${page.number}:${Number(page.copies) || 1}`);
             });
             if (!uploadFiles.length) {
                 setCheckingOut(false);
@@ -358,6 +385,9 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
         }
     }
 
+    const sheetCount = pages.reduce((sum, page) => sum + (Number(page.copies) || 1), 0);
+    const maxCopies = Math.max(1, Number(limits.max_copies) || 10);
+
     const fileCount = serverBacked
         ? job.documents.length
         : new Set(pages.map((page) => page.fileKey)).size;
@@ -389,7 +419,7 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
             footer={(
                 <div className="border-t border-emerald-900/10 bg-white px-3 py-2 pb-[max(0.55rem,env(safe-area-inset-bottom))]">
                     <div className="mb-1.5 flex items-center justify-between gap-2 text-[11px] font-medium text-slate">
-                        <span>{t.pages(job.total_pages)}</span>
+                        <span>{t.pages(sheetCount)}</span>
                         <button
                             type="button"
                             onClick={requestPick}
@@ -451,10 +481,10 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
                 <div className="relative z-10 flex items-center gap-2 px-3 py-1.5">
                     <p className="min-w-0 flex-1 truncate text-[12px] font-semibold text-white">
                         {active
-                            ? `${t.pageOf(active.number, active.document.page_count)} · A4`
+                            ? `${t.pageOf(active.number, active.document.page_count)} · A4${(Number(active.copies) || 1) > 1 ? ` ${t.copiesTimes(Number(active.copies) || 1)}` : ''}`
                             : t.reviewTitle}
                     </p>
-                    <span className="font-mono text-[12px] font-semibold text-white/90">{pages.length}</span>
+                    <span className="font-mono text-[12px] font-semibold text-white/90">{sheetCount}</span>
                     {active && (
                         <button
                             type="button"
@@ -576,6 +606,13 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
                                                 <circle cx="11" cy="12" r="1.2" />
                                             </svg>
                                         </span>
+                                        <CopyStepper
+                                            value={Number(page.copies) || 1}
+                                            max={maxCopies}
+                                            lessLabel={t.copiesLess}
+                                            moreLabel={t.copiesMore}
+                                            onChange={(next) => setCopies(page.id, next)}
+                                        />
                                         <button
                                             type="button"
                                             data-no-drag
@@ -616,5 +653,49 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
                 />
             )}
         </PhoneShell>
+    );
+}
+
+function CopyStepper({ value, max, onChange, lessLabel, moreLabel }) {
+    const raised = value > 1;
+
+    return (
+        <div
+            data-no-drag
+            className={`absolute bottom-1 end-1 z-10 flex items-stretch shadow-sm ${
+                raised ? 'bg-primary text-white' : 'bg-white/95 text-ink'
+            }`}
+            onPointerDown={(event) => event.stopPropagation()}
+        >
+            <button
+                type="button"
+                data-no-drag
+                aria-label={lessLabel}
+                disabled={value <= 1}
+                onClick={(event) => {
+                    event.stopPropagation();
+                    onChange(value - 1);
+                }}
+                className="flex h-6 w-5 items-center justify-center text-[14px] font-bold leading-none disabled:opacity-30"
+            >
+                −
+            </button>
+            <span className="flex h-6 min-w-[0.9rem] items-center justify-center font-mono text-[10px] font-bold tabular-nums">
+                {value}
+            </span>
+            <button
+                type="button"
+                data-no-drag
+                aria-label={moreLabel}
+                disabled={value >= max}
+                onClick={(event) => {
+                    event.stopPropagation();
+                    onChange(value + 1);
+                }}
+                className="flex h-6 w-5 items-center justify-center text-[14px] font-bold leading-none disabled:opacity-30"
+            >
+                +
+            </button>
+        </div>
     );
 }

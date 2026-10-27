@@ -38,13 +38,24 @@ class PrintPaymentController extends Controller
             return redirect()->route('print.create');
         }
 
+        $maxCopies = max(1, (int) config('print.max_copies', 10));
         $data = $request->validate([
             'page_ids' => ['required', 'array', 'min:1'],
             'page_ids.*' => ['integer', 'distinct'],
+            'copies' => ['sometimes', 'array'],
+            'copies.*' => ['integer', 'min:1', 'max:'.$maxCopies],
             'duplex' => ['required', 'boolean'],
         ]);
 
-        $this->documents->reorder($job, $data['page_ids']);
+        $copies = array_key_exists('copies', $data) ? array_map('intval', $data['copies']) : [];
+
+        if ($copies !== [] && count($copies) !== count($data['page_ids'])) {
+            return back()->withErrors([
+                'copies' => 'Each page needs its own copy count.',
+            ]);
+        }
+
+        $this->documents->reorder($job, $data['page_ids'], $copies);
 
         $updates = ['duplex' => $data['duplex']];
 
@@ -70,14 +81,24 @@ class PrintPaymentController extends Controller
         $data = $request->validate([
             'duplex' => ['required', 'boolean'],
             'selection' => ['required', 'array', 'min:1', 'max:500'],
-            'selection.*' => ['required', 'regex:/^\d+:\d+$/'],
+            'selection.*' => ['required', 'regex:/^\d+:\d+(?::\d{1,2})?$/'],
         ]);
 
-        $selection = array_map(function (string $item) {
-            [$fileIndex, $pageNumber] = array_map('intval', explode(':', $item, 2));
+        $maxCopies = max(1, (int) config('print.max_copies', 10));
+        $selection = [];
 
-            return [$fileIndex, $pageNumber];
-        }, $data['selection']);
+        foreach ($data['selection'] as $item) {
+            $parts = array_map('intval', explode(':', $item));
+            $copies = $parts[2] ?? 1;
+
+            if ($copies < 1 || $copies > $maxCopies) {
+                return back()->withErrors([
+                    'selection' => 'Choose between 1 and '.$maxCopies.' copies.',
+                ]);
+            }
+
+            $selection[] = [$parts[0], $parts[1], $copies];
+        }
 
         $this->documents->hold(
             $job,
@@ -164,14 +185,14 @@ class PrintPaymentController extends Controller
             }
 
             $quote = $this->pricing->quote($locked);
-            $pageIds = PrintPage::query()
+            $rows = PrintPage::query()
                 ->whereIn('print_document_id', $locked->documents()->select('id'))
                 ->orderBy('position')
-                ->pluck('id')
-                ->map(fn ($id) => (int) $id)
-                ->all();
+                ->get(['id', 'copies']);
+            $pageIds = $rows->map(fn ($page) => (int) $page->id)->all();
+            $sheets = (int) $rows->sum('copies');
 
-            if ($pageIds === [] || count($pageIds) !== $quote['page_count']) {
+            if ($pageIds === [] || $sheets !== $quote['page_count']) {
                 return 'mismatch';
             }
 

@@ -55,6 +55,7 @@ export function pagesFromDraft(draft) {
             number: page.number,
             index: index + 1,
             fileKey: page.fileKey,
+            copies: Math.max(1, Number(page.copies) || 1),
             document: {
                 id: page.fileKey,
                 name: file.name,
@@ -94,7 +95,10 @@ export async function readDraft(jobId) {
                 pages: file.pages,
                 file: new File([file.blob], file.name, { type: file.type }),
             })),
-            pages: stored.pages,
+                pages: stored.pages.map((page) => ({
+                    ...page,
+                    copies: Math.max(1, Number(page.copies) || 1),
+                })),
         });
     } catch {
         return null;
@@ -121,6 +125,7 @@ export async function saveDraft(jobId, draft) {
                     id: page.id,
                     fileKey: page.fileKey,
                     number: page.number,
+                    copies: Math.max(1, Number(page.copies) || 1),
                 })),
             }, String(jobId));
             tx.oncomplete = () => resolve();
