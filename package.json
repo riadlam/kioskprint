@@ -20,6 +20,7 @@
     },
     "dependencies": {
         "@inertiajs/react": "^3.9.1",
+        "@thegrizzlylabs/web-geniusscan-sdk": "^6.6.0",
         "framer-motion": "^14.4.0",
         "jscanify": "^1.4.3",
         "pdfjs-dist": "^4.10.38",

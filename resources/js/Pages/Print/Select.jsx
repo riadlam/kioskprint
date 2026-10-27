@@ -1,9 +1,9 @@
 import { Head, useForm } from '@inertiajs/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import AccessSheet from '../../Components/Print/AccessSheet';
-import DocumentScanner from '../../Components/Print/DocumentScanner';
 import LocalAssetPreview from '../../Components/Print/LocalAssetPreview';
 import PhoneShell from '../../Components/Print/PhoneShell';
+import { scanPages } from '../../lib/geniusScan';
 import { copy } from '../../lib/printCopy';
 import {
     ACCEPT,
@@ -28,7 +28,7 @@ export default function Select({ limits }) {
     const [notice, setNotice] = useState('');
     const [sheet, setSheet] = useState(null);
     const [accessGranted, setAccessGranted] = useState(() => sessionStorage.getItem(ACCESS_KEY) === '1');
-    const [scanning, setScanning] = useState(false);
+    const [scanBusy, setScanBusy] = useState(false);
     const form = useForm({ locale: 'ar', files: [] });
     const t = copy[locale];
     const mb = Math.round(limits.max_kilobytes / 1024);
@@ -160,7 +160,25 @@ export default function Select({ limits }) {
 
     const serverErrors = Object.values(form.errors);
     const canContinue = selected.length > 0 && !reading && !form.processing;
-    const canScan = items.length < limits.max_files;
+    const canScan = items.length < limits.max_files && !scanBusy;
+
+    async function startScan() {
+        if (!canScan) {
+            return;
+        }
+        setScanBusy(true);
+        setNotice('');
+        try {
+            const files = await scanPages(locale);
+            if (files.length) {
+                await acceptFiles(files);
+            }
+        } catch {
+            setNotice(t.scanFailed);
+        } finally {
+            setScanBusy(false);
+        }
+    }
     const cta = form.processing
         ? t.uploading
         : reading
@@ -213,7 +231,7 @@ export default function Select({ limits }) {
                     <div className="flex gap-1.5">
                         <button
                             type="button"
-                            onClick={() => setScanning(true)}
+                            onClick={startScan}
                             disabled={!canScan}
                             className="border border-white/25 bg-white/10 px-3 py-2 text-[11px] font-semibold text-white disabled:opacity-40"
                         >
@@ -276,7 +294,7 @@ export default function Select({ limits }) {
                             <p className="mt-1 text-[11px] text-white/70">{t.scanHint}</p>
                             <button
                                 type="button"
-                                onClick={() => setScanning(true)}
+                                onClick={startScan}
                                 disabled={!canScan}
                                 className="mt-4 h-12 w-full max-w-xs bg-white text-[14px] font-semibold text-primary disabled:opacity-40"
                             >
@@ -297,7 +315,7 @@ export default function Select({ limits }) {
                         <div className="flex items-center gap-3">
                             <button
                                 type="button"
-                                onClick={() => setScanning(true)}
+                                onClick={startScan}
                                 disabled={!canScan}
                                 className="text-[11px] font-semibold text-primary disabled:opacity-40"
                             >
@@ -337,7 +355,7 @@ export default function Select({ limits }) {
                             <p className="mt-1 max-w-[16rem] text-[12px] leading-relaxed text-slate">{t.scanHint}</p>
                             <button
                                 type="button"
-                                onClick={() => setScanning(true)}
+                                onClick={startScan}
                                 disabled={!canScan}
                                 className="mt-5 h-12 w-full max-w-xs bg-primary text-[13px] font-semibold text-white disabled:opacity-40"
                             >
@@ -409,15 +427,6 @@ export default function Select({ limits }) {
                     mode={sheet}
                     onClose={() => setSheet(null)}
                     onContinue={openPicker}
-                />
-            )}
-            {scanning && (
-                <DocumentScanner
-                    locale={locale}
-                    copy={t}
-                    room={Math.max(0, limits.max_files - items.length)}
-                    onClose={() => setScanning(false)}
-                    onPage={(file) => acceptFiles([file])}
                 />
             )}
         </PhoneShell>

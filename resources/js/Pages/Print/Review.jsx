@@ -2,10 +2,10 @@ import { Head, router, useForm } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import A4PagePreview from '../../Components/Print/A4PagePreview';
 import AccessSheet from '../../Components/Print/AccessSheet';
-import DocumentScanner from '../../Components/Print/DocumentScanner';
 import PageThumb from '../../Components/Print/PageThumb';
 import PhoneShell from '../../Components/Print/PhoneShell';
 import TemplatePicker from '../../Components/Print/TemplatePicker';
+import { scanPages } from '../../lib/geniusScan';
 import { copy } from '../../lib/printCopy';
 import { clearDraft, mimeOf, pagesFromDraft, readDraft, saveDraft } from '../../lib/localPrintDraft';
 import { ACCEPT, countPdfPages, isAndroid, isPdfFile, isSupported, isTooBig, makeItemId, pickPrintFiles } from '../../lib/printFiles';
@@ -54,7 +54,7 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
     const [uploadPercent, setUploadPercent] = useState(null);
     const [draggingId, setDraggingId] = useState(null);
     const [checkingOut, setCheckingOut] = useState(false);
-    const [scanning, setScanning] = useState(false);
+    const [scanBusy, setScanBusy] = useState(false);
     const [templatesOpen, setTemplatesOpen] = useState(false);
     const [templateBusy, setTemplateBusy] = useState(null);
     const form = useForm({ locale: job.locale, files: [] });
@@ -362,6 +362,24 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
         ? job.documents.length
         : new Set(pages.map((page) => page.fileKey)).size;
 
+    async function startScan() {
+        if (form.processing || scanBusy || fileCount >= limits.max_files) {
+            return;
+        }
+        setScanBusy(true);
+        setNotice('');
+        try {
+            const files = await scanPages(locale);
+            if (files.length) {
+                await addAccepted(files);
+            }
+        } catch {
+            setNotice(t.scanFailed);
+        } finally {
+            setScanBusy(false);
+        }
+    }
+
     return (
         <PhoneShell
             locale={locale}
@@ -394,8 +412,8 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
                         </button>
                         <button
                             type="button"
-                            onClick={() => setScanning(true)}
-                            disabled={form.processing || fileCount >= limits.max_files}
+                            onClick={startScan}
+                            disabled={form.processing || fileCount >= limits.max_files || scanBusy}
                             className="flex h-14 items-center justify-center gap-2 rounded-xl border border-primary bg-white px-2 text-[12px] font-extrabold leading-tight text-primary disabled:opacity-40"
                         >
                             <ScanIcon />
@@ -595,15 +613,6 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
                     mode={sheet}
                     onClose={() => setSheet(null)}
                     onContinue={openPicker}
-                />
-            )}
-            {scanning && (
-                <DocumentScanner
-                    locale={locale}
-                    copy={t}
-                    room={Math.max(0, limits.max_files - fileCount)}
-                    onClose={() => setScanning(false)}
-                    onPage={(file) => addAccepted([file])}
                 />
             )}
         </PhoneShell>
