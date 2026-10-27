@@ -5,6 +5,7 @@ const LINKS = [
     { id: 'status', href: '/admin/status', label: 'Status' },
     { id: 'jobs', href: '/admin#jobs', label: 'Print jobs' },
     { id: 'screen', href: '/admin/screen', label: 'Screen' },
+    { id: 'templates', href: '/admin/templates', label: 'Forms' },
 ];
 
 export default function AdminShell({ title, subtitle, active, email, children }) {

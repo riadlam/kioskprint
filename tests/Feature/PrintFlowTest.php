@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Services\Print\KioskDeskCodes;
+use Database\Seeders\PrintTemplateSeeder;
 use App\Models\CoinEvent;
 use App\Models\PrintDocument;
 use App\Models\PrintJob;
@@ -380,6 +381,8 @@ class PrintFlowTest extends TestCase
     public function test_template_opens_payment_at_fifty_dinars_per_page(): void
     {
         Storage::fake('local');
+        Storage::fake('public');
+        $this->seed(PrintTemplateSeeder::class);
 
         $this->openAtKiosk('kiosk-template-1');
 

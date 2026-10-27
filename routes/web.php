@@ -5,12 +5,14 @@ use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AppDownloadController;
 use App\Http\Controllers\AdminScreenController;
 use App\Http\Controllers\AdminStatusController;
+use App\Http\Controllers\AdminTemplateController;
 use App\Http\Controllers\KioskBroadcastController;
 use App\Http\Controllers\KioskCoinController;
 use App\Http\Controllers\KioskDeskController;
 use App\Http\Controllers\KioskPrintUnitController;
 use App\Http\Controllers\KioskPrintStatusController;
 use App\Http\Controllers\KioskScreenController;
+use App\Http\Controllers\KioskTemplateController;
 use App\Http\Controllers\PrintDocumentController;
 use App\Http\Controllers\PrintJobController;
 use App\Http\Controllers\PrintPageController;
@@ -39,8 +41,13 @@ Route::middleware('admin')->group(function () {
     Route::patch('/admin/screen/videos/{video}', [AdminScreenController::class, 'updateVideo'])->name('admin.screen.videos.update');
     Route::post('/admin/screen/videos/{video}/move', [AdminScreenController::class, 'move'])->name('admin.screen.videos.move');
     Route::delete('/admin/screen/videos/{video}', [AdminScreenController::class, 'destroy'])->name('admin.screen.videos.destroy');
+    Route::get('/admin/templates', [AdminTemplateController::class, 'show'])->name('admin.templates');
+    Route::post('/admin/templates', [AdminTemplateController::class, 'store'])->name('admin.templates.store');
+    Route::post('/admin/templates/{template}', [AdminTemplateController::class, 'update'])->name('admin.templates.update');
+    Route::delete('/admin/templates/{template}', [AdminTemplateController::class, 'destroy'])->name('admin.templates.destroy');
 });
 
+Route::match(['GET', 'OPTIONS'], '/kiosk/templates', [KioskTemplateController::class, 'show'])->name('kiosk.templates');
 Route::match(['GET', 'OPTIONS'], '/kiosk/screen', [KioskScreenController::class, 'show'])->name('kiosk.screen');
 Route::match(['GET', 'OPTIONS'], '/kiosk/screen/videos/{video}', [KioskScreenController::class, 'video'])->name('kiosk.screen.video');
 
