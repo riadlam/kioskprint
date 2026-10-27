@@ -417,7 +417,7 @@ export default function Select({ limits }) {
                     copy={t}
                     room={Math.max(0, limits.max_files - items.length)}
                     onClose={() => setScanning(false)}
-                    onPage={acceptFiles}
+                    onPage={(file) => acceptFiles([file])}
                 />
             )}
         </PhoneShell>

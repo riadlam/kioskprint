@@ -7,25 +7,21 @@ import {
     drawOutline,
     drawVideoFrame,
     insetCorners,
-    pageInsideFrame,
     loadScannerEngine,
+    pageInsideFrame,
     renderScan,
+    scaleCorners,
 } from '../../lib/documentScan';
 
-const CORNER_KEYS = ['topLeftCorner', 'topRightCorner', 'bottomRightCorner', 'bottomLeftCorner'];
-
-export default function DocumentScanner({ locale, copy, room, onClose, onPage }) {
+export default function DocumentScanner({ locale, copy, onClose, onPage }) {
     const videoRef = useRef(null);
     const overlayRef = useRef(null);
     const streamRef = useRef(null);
     const scannerRef = useRef(null);
-    const sourceRef = useRef(null);
-    const resultRef = useRef(null);
     const loopRef = useRef(0);
     const watchRef = useRef(0);
-    const publishingRef = useRef(false);
     const capturingRef = useRef(false);
-    const steadyRef = useRef({ count: 0, corners: null });
+    const steadyRef = useRef({ count: 0, corners: null, width: 0 });
     const [phase, setPhase] = useState('camera');
     const [paperFound, setPaperFound] = useState(false);
     const [hold, setHold] = useState(0);
@@ -33,12 +29,6 @@ export default function DocumentScanner({ locale, copy, room, onClose, onPage })
     const phaseRef = useRef(phase);
     phaseRef.current = phase;
     const [aspect, setAspect] = useState('3 / 4');
-    const [look, setLook] = useState('document');
-    const [turns, setTurns] = useState(0);
-    const [corners, setCorners] = useState(null);
-    const [previewUrl, setPreviewUrl] = useState('');
-    const [busy, setBusy] = useState(false);
-    const [message, setMessage] = useState('');
 
     useEffect(() => {
         const previous = document.body.style.overflow;
@@ -88,47 +78,6 @@ export default function DocumentScanner({ locale, copy, room, onClose, onPage })
         };
     }, [phase]);
 
-    useEffect(() => {
-        if (phase !== 'preview' || !corners || !sourceRef.current) {
-            return undefined;
-        }
-
-        let cancelled = false;
-        setBusy(true);
-        const timer = window.setTimeout(() => {
-            try {
-                const canvas = renderScan(sourceRef.current, corners, look, turns);
-                if (!canvas || cancelled) {
-                    return;
-                }
-                resultRef.current = canvas;
-                canvas.toBlob((blob) => {
-                    if (!blob || cancelled) {
-                        return;
-                    }
-                    const url = URL.createObjectURL(blob);
-                    setPreviewUrl((current) => {
-                        if (current) {
-                            URL.revokeObjectURL(current);
-                        }
-                        return url;
-                    });
-                    setBusy(false);
-                }, 'image/jpeg', 0.85);
-            } catch {
-                if (!cancelled) {
-                    setBusy(false);
-                    setMessage(copy.scanFailed);
-                }
-            }
-        }, 40);
-
-        return () => {
-            cancelled = true;
-            window.clearTimeout(timer);
-        };
-    }, [phase, corners, look, turns, copy.scanFailed]);
-
     async function openCamera() {
         const stream = await navigator.mediaDevices.getUserMedia({
             audio: false,
@@ -169,23 +118,21 @@ export default function DocumentScanner({ locale, copy, room, onClose, onPage })
             const video = videoRef.current;
             const overlay = overlayRef.current;
             if (!video || !overlay || video.readyState < 2) {
-                loopRef.current = window.setTimeout(tick, 280);
+                loopRef.current = window.setTimeout(tick, 400);
                 return;
             }
 
             const frame = drawVideoFrame(video, 480);
             overlay.width = frame.width;
             overlay.height = frame.height;
-            const scanner = scannerRef.current;
-            const found = scanner ? detectCorners(scanner, frame) : null;
+            const found = scannerRef.current ? detectCorners(frame) : null;
             drawOutline(overlay.getContext('2d'), found, frame.width, frame.height);
             setPaperFound((current) => (current === Boolean(found) ? current : Boolean(found)));
-            const ready = noteSteady(found, frame.width, frame.height);
-            if (ready) {
+            if (noteSteady(found, frame.width, frame.height)) {
                 capture();
                 return;
             }
-            loopRef.current = window.setTimeout(tick, 280);
+            loopRef.current = window.setTimeout(tick, 400);
         };
         tick();
     }
@@ -199,7 +146,7 @@ export default function DocumentScanner({ locale, copy, room, onClose, onPage })
 
     function noteSteady(found, width, height) {
         if (!found || !pageInsideFrame(found, width, height)) {
-            steadyRef.current = { count: 0, corners: null };
+            steadyRef.current = { count: 0, corners: null, width: 0 };
             setHold((current) => (current === 0 ? current : 0));
             return false;
         }
@@ -207,85 +154,49 @@ export default function DocumentScanner({ locale, copy, room, onClose, onPage })
         const previous = steadyRef.current.corners;
         const still = previous && cornersHoldStill(previous, found, width, height);
         const count = still ? steadyRef.current.count + 1 : 1;
-        steadyRef.current = { count, corners: found };
+        steadyRef.current = { count, corners: found, width };
         setHold((current) => (current === count ? current : count));
         return count >= 4;
     }
 
-    function capture() {
+    async function capture() {
         const video = videoRef.current;
         if (capturingRef.current || !video || !video.videoWidth) {
             return;
         }
         capturingRef.current = true;
-        steadyRef.current = { count: 0, corners: null };
+        const steady = steadyRef.current;
+        steadyRef.current = { count: 0, corners: null, width: 0 };
         setHold(0);
 
         const frame = drawVideoFrame(video, 1600);
         setFlash(true);
         window.setTimeout(() => setFlash(false), 140);
         stopWatching();
-        sourceRef.current = frame;
-        const scanner = scannerRef.current;
-        const found = scanner ? detectCorners(scanner, frame) : null;
-        const next = found || insetCorners(frame.width, frame.height);
-        setCorners(next);
-        setTurns(0);
-        setLook('document');
-        setMessage(found ? '' : copy.scanAdjust);
-        setPhase(found ? 'preview' : 'corners');
-    }
+        setPhase('working');
 
-    async function publish() {
-        const canvas = resultRef.current;
-        if (!canvas || publishingRef.current) {
-            return null;
-        }
-        publishingRef.current = true;
-        setBusy(true);
         try {
+            let corners = scannerRef.current ? detectCorners(frame) : null;
+            if (!corners && steady.corners && steady.width) {
+                corners = scaleCorners(steady.corners, frame.width / steady.width);
+            }
+            const page = corners || insetCorners(frame.width, frame.height);
+            let canvas = frame;
+            if (scannerRef.current) {
+                try {
+                    canvas = renderScan(frame, page);
+                } catch {
+                    canvas = frame;
+                }
+            }
             const file = await canvasToJpeg(canvas, `scan-${Date.now()}.jpg`);
             await onPage(file);
-            return file;
-        } finally {
-            publishingRef.current = false;
-            setBusy(false);
-        }
-    }
-
-    async function addAndClose() {
-        const file = await publish();
-        if (file) {
             onClose();
+        } catch {
+            setPhase('error');
         }
     }
 
-    async function addAndContinue() {
-        const file = await publish();
-        if (!file || room <= 1) {
-            if (file) {
-                onClose();
-            }
-            return;
-        }
-        resultRef.current = null;
-        sourceRef.current = null;
-        setCorners(null);
-        setMessage('');
-        setPaperFound(false);
-        setHold(0);
-        capturingRef.current = false;
-        steadyRef.current = { count: 0, corners: null };
-        setPreviewUrl((current) => {
-            if (current) {
-                URL.revokeObjectURL(current);
-            }
-            return '';
-        });
-        setPhase('camera');
-    }
-
-    const canTakeMore = room > 1;
     const shell = (
         <div
             dir={locale === 'ar' ? 'rtl' : 'ltr'}
@@ -300,6 +211,10 @@ export default function DocumentScanner({ locale, copy, room, onClose, onPage })
 
             {(phase === 'denied' || phase === 'error') && (
                 <Status text={phase === 'denied' ? copy.scanCameraDenied : copy.scanFailed} />
+            )}
+
+            {phase === 'working' && (
+                <Status text={copy.scanWorking} spin />
             )}
 
             {phase === 'camera' && (
@@ -326,161 +241,10 @@ export default function DocumentScanner({ locale, copy, room, onClose, onPage })
                     </div>
                 </>
             )}
-
-            {(phase === 'preview' || phase === 'corners') && (
-                <>
-                    <div className="flex min-h-0 flex-1 items-center justify-center px-4">
-                        {phase === 'preview' ? (
-                            <div className="relative flex h-full max-h-full w-full items-center justify-center">
-                                {previewUrl ? (
-                                    <img src={previewUrl} alt="" className="max-h-full max-w-full bg-white object-contain" />
-                                ) : null}
-                                {busy && (
-                                    <p className="absolute bottom-3 bg-emerald-950/80 px-3 py-1 text-[11px]">{copy.scanWorking}</p>
-                                )}
-                            </div>
-                        ) : (
-                            <CornerEditor
-                                source={sourceRef.current}
-                                corners={corners}
-                                hint={copy.scanAdjust}
-                                onChange={setCorners}
-                            />
-                        )}
-                    </div>
-                    {message && phase === 'corners' ? null : message && (
-                        <p className="px-6 pt-2 text-center text-[12px] text-amber-100">{message}</p>
-                    )}
-                    <div className="space-y-3 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
-                        <div className="grid grid-cols-3 gap-2">
-                            <Choice active={look === 'document'} onClick={() => setLook('document')}>{copy.scanDocument}</Choice>
-                            <Choice active={look === 'photo'} onClick={() => setLook('photo')}>{copy.scanPhoto}</Choice>
-                            <Choice onClick={() => setTurns((current) => (current + 1) % 4)}>{copy.scanRotate}</Choice>
-                        </div>
-                        <div className={`grid gap-2 ${canTakeMore ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                            {phase === 'preview' ? (
-                                <button type="button" onClick={() => setPhase('corners')} className="h-12 border border-white/30 text-[13px] font-semibold">
-                                    {copy.scanCorners}
-                                </button>
-                            ) : (
-                                <button type="button" onClick={() => setPhase('preview')} className="h-12 border border-white/30 text-[13px] font-semibold">
-                                    {copy.scanApply}
-                                </button>
-                            )}
-                            {canTakeMore && (
-                                <button
-                                    type="button"
-                                    onClick={addAndContinue}
-                                    disabled={busy || !previewUrl}
-                                    className="h-12 border border-white/30 text-[13px] font-semibold disabled:opacity-40"
-                                >
-                                    {copy.scanAgain}
-                                </button>
-                            )}
-                        </div>
-                        <button
-                            type="button"
-                            onClick={addAndClose}
-                            disabled={busy || !previewUrl}
-                            className="h-12 w-full bg-white text-[13px] font-semibold text-emerald-950 disabled:opacity-40"
-                        >
-                            {copy.scanDone}
-                        </button>
-                    </div>
-                </>
-            )}
         </div>
     );
 
     return createPortal(shell, document.body);
-}
-
-function CornerEditor({ source, corners, hint, onChange }) {
-    const boxRef = useRef(null);
-    const draftRef = useRef(corners);
-    const [draft, setDraft] = useState(corners);
-    const url = useMemoUrl(source);
-
-    useEffect(() => {
-        draftRef.current = corners;
-        setDraft(corners);
-    }, [corners]);
-
-    if (!source || !draft || !url) {
-        return null;
-    }
-
-    function move(key, event) {
-        const rect = boxRef.current?.getBoundingClientRect();
-        if (!rect) {
-            return;
-        }
-        const x = Math.min(source.width, Math.max(0, ((event.clientX - rect.left) / rect.width) * source.width));
-        const y = Math.min(source.height, Math.max(0, ((event.clientY - rect.top) / rect.height) * source.height));
-        const next = { ...draftRef.current, [key]: { x, y } };
-        draftRef.current = next;
-        setDraft(next);
-    }
-
-    return (
-        <div className="flex h-full w-full flex-col items-center justify-center">
-            <div ref={boxRef} dir="ltr" className="relative max-h-full max-w-full" style={{ aspectRatio: `${source.width} / ${source.height}` }}>
-                <img src={url} alt="" className="h-full w-full object-contain" />
-                <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox={`0 0 ${source.width} ${source.height}`}>
-                    <polygon
-                        points={CORNER_KEYS.map((key) => `${draft[key].x},${draft[key].y}`).join(' ')}
-                        fill="none"
-                        stroke="#6ee7b7"
-                        strokeWidth={Math.max(4, source.width / 180)}
-                    />
-                </svg>
-                {CORNER_KEYS.map((key) => (
-                    <button
-                        key={key}
-                        type="button"
-                        aria-label={key}
-                        className="absolute h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-emerald-950 bg-emerald-200"
-                        style={{ left: `${(draft[key].x / source.width) * 100}%`, top: `${(draft[key].y / source.height) * 100}%` }}
-                        onPointerDown={(event) => event.currentTarget.setPointerCapture(event.pointerId)}
-                        onPointerMove={(event) => {
-                            if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-                                move(key, event);
-                            }
-                        }}
-                        onPointerUp={() => onChange(draftRef.current)}
-                    />
-                ))}
-            </div>
-            <p className="px-6 pt-3 text-center text-[12px] text-white/75">{hint}</p>
-        </div>
-    );
-}
-
-function useMemoUrl(source) {
-    const [url, setUrl] = useState('');
-
-    useEffect(() => {
-        if (!source) {
-            return undefined;
-        }
-        const next = source.toDataURL('image/jpeg', 0.8);
-        setUrl(next);
-        return undefined;
-    }, [source]);
-
-    return url;
-}
-
-function Choice({ active = false, onClick, children }) {
-    return (
-        <button
-            type="button"
-            onClick={onClick}
-            className={`h-11 text-[12px] font-semibold ${active ? 'bg-white text-emerald-950' : 'border border-white/30 text-white'}`}
-        >
-            {children}
-        </button>
-    );
 }
 
 function Status({ text, spin = false }) {

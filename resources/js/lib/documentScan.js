@@ -82,11 +82,7 @@ export function loadScannerEngine() {
         enginePromise = (async () => {
             await loadScript('/scanner/opencv.js');
             await waitForOpenCv();
-            await loadScript('/scanner/jscanify.js');
-            if (typeof window.jscanify !== 'function') {
-                throw new Error('jscanify');
-            }
-            return new window.jscanify();
+            return window.cv;
         })().catch((error) => {
             enginePromise = null;
             throw error;
@@ -179,169 +175,163 @@ export function cornersHoldStill(previous, next, width, height) {
     return CORNER_KEYS.every((key) => Math.hypot(previous[key].x - next[key].x, previous[key].y - next[key].y) <= limit);
 }
 
-export function detectCorners(scanner, canvas) {
-    const img = window.cv.imread(canvas);
+export function orderQuad(points) {
+    const scored = points.map((point) => ({
+        point: { x: point.x, y: point.y },
+        sum: point.x + point.y,
+        diff: point.y - point.x,
+    }));
+
+    return {
+        topLeftCorner: scored.reduce((best, item) => (item.sum < best.sum ? item : best)).point,
+        bottomRightCorner: scored.reduce((best, item) => (item.sum > best.sum ? item : best)).point,
+        topRightCorner: scored.reduce((best, item) => (item.diff < best.diff ? item : best)).point,
+        bottomLeftCorner: scored.reduce((best, item) => (item.diff > best.diff ? item : best)).point,
+    };
+}
+
+export function scaleCorners(corners, scale) {
+    return CORNER_KEYS.reduce((next, key) => {
+        next[key] = { x: corners[key].x * scale, y: corners[key].y * scale };
+        return next;
+    }, {});
+}
+
+function readPoints(mat) {
+    const data = mat.data32S;
+    const points = [];
+    for (let index = 0; index < data.length; index += 2) {
+        points.push({ x: data[index], y: data[index + 1] });
+    }
+    return points;
+}
+
+function release(mat) {
+    if (mat && typeof mat.delete === 'function') {
+        mat.delete();
+    }
+}
+
+export function detectCorners(canvas) {
+    const cv = window.cv;
+    if (!cv || typeof cv.Mat !== 'function' || !canvas) {
+        return null;
+    }
+
+    const img = cv.imread(canvas);
+    const gray = new cv.Mat();
+    const blur = new cv.Mat();
+    const edges = new cv.Mat();
+    const contours = new cv.MatVector();
+    const hierarchy = new cv.Mat();
+    const approx = new cv.Mat();
+    let best = null;
+
     try {
-        const contour = scanner.findPaperContour(img);
-        if (!contour) {
+        cv.cvtColor(img, gray, cv.COLOR_RGBA2GRAY);
+        cv.GaussianBlur(gray, blur, new cv.Size(5, 5), 0);
+        cv.Canny(blur, edges, 75, 200);
+        cv.findContours(edges, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+
+        let bestArea = 0;
+        for (let index = 0; index < contours.size(); index += 1) {
+            const item = contours.get(index);
+            const area = cv.contourArea(item);
+            if (area > bestArea) {
+                release(best);
+                best = item.clone();
+                bestArea = area;
+            }
+            item.delete();
+        }
+
+        if (!best || bestArea < canvas.width * canvas.height * 0.12) {
             return null;
         }
-        const corners = scanner.getCornerPoints(contour);
+
+        const perimeter = cv.arcLength(best, true);
+        let points = null;
+        [0.02, 0.04, 0.06, 0.08].some((factor) => {
+            cv.approxPolyDP(best, approx, factor * perimeter, true);
+            if (approx.rows === 4) {
+                points = readPoints(approx);
+                return true;
+            }
+            return false;
+        });
+
+        if (!points && cv.RotatedRect?.points) {
+            points = cv.RotatedRect.points(cv.minAreaRect(best)).map((point) => ({ x: point.x, y: point.y }));
+        }
+        if (!points || points.length !== 4) {
+            return null;
+        }
+
+        const corners = orderQuad(points);
         return cornersAreUsable(corners, canvas.width, canvas.height) ? corners : null;
     } catch {
         return null;
     } finally {
-        img.delete();
+        release(img);
+        release(gray);
+        release(blur);
+        release(edges);
+        release(hierarchy);
+        release(contours);
+        release(approx);
+        release(best);
     }
 }
 
-function solve(rows) {
-    const n = rows.length;
-    const matrix = rows.map((row) => row.slice());
+function warpWithOpenCv(source, corners, width, height) {
+    const cv = window.cv;
+    const img = cv.imread(source);
+    const srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
+        corners.topLeftCorner.x, corners.topLeftCorner.y,
+        corners.topRightCorner.x, corners.topRightCorner.y,
+        corners.bottomLeftCorner.x, corners.bottomLeftCorner.y,
+        corners.bottomRightCorner.x, corners.bottomRightCorner.y,
+    ]);
+    const dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
+        0, 0,
+        width, 0,
+        0, height,
+        width, height,
+    ]);
+    const transform = cv.getPerspectiveTransform(srcTri, dstTri);
+    const warped = new cv.Mat();
+    const gray = new cv.Mat();
+    const page = new cv.Mat();
 
-    for (let col = 0; col < n; col += 1) {
-        let pivot = col;
-        for (let row = col + 1; row < n; row += 1) {
-            if (Math.abs(matrix[row][col]) > Math.abs(matrix[pivot][col])) {
-                pivot = row;
-            }
-        }
-        [matrix[col], matrix[pivot]] = [matrix[pivot], matrix[col]];
-        const scale = matrix[col][col] || 1e-12;
-        for (let colIndex = col; colIndex <= n; colIndex += 1) {
-            matrix[col][colIndex] /= scale;
-        }
-        for (let row = 0; row < n; row += 1) {
-            if (row === col) {
-                continue;
-            }
-            const factor = matrix[row][col];
-            for (let colIndex = col; colIndex <= n; colIndex += 1) {
-                matrix[row][colIndex] -= factor * matrix[col][colIndex];
-            }
-        }
+    try {
+        cv.warpPerspective(
+            img,
+            warped,
+            transform,
+            new cv.Size(width, height),
+            cv.INTER_LINEAR,
+            cv.BORDER_CONSTANT,
+            new cv.Scalar(255, 255, 255, 255),
+        );
+        cv.cvtColor(warped, gray, cv.COLOR_RGBA2GRAY);
+        cv.adaptiveThreshold(gray, page, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 31, 12);
+        const out = document.createElement('canvas');
+        cv.imshow(out, page);
+        return out;
+    } finally {
+        release(img);
+        release(srcTri);
+        release(dstTri);
+        release(transform);
+        release(warped);
+        release(gray);
+        release(page);
     }
-
-    return matrix.map((row) => row[n]);
 }
 
-function homography(from, to) {
-    const rows = [];
-    from.forEach((point, index) => {
-        const x = point.x;
-        const y = point.y;
-        const X = to[index].x;
-        const Y = to[index].y;
-        rows.push([x, y, 1, 0, 0, 0, -X * x, -X * y, X]);
-        rows.push([0, 0, 0, x, y, 1, -Y * x, -Y * y, Y]);
-    });
-    const h = solve(rows);
-    h.push(1);
-    return h;
-}
-
-function applyHomography(h, x, y) {
-    const weight = h[6] * x + h[7] * y + h[8];
-    return {
-        x: (h[0] * x + h[1] * y + h[2]) / weight,
-        y: (h[3] * x + h[4] * y + h[5]) / weight,
-    };
-}
-
-export function projectPoint(from, to, x, y) {
-    return applyHomography(homography(from, to), x, y);
-}
-
-function warpCanvas(source, corners, width, height) {
-    const srcImage = source.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, source.width, source.height);
-    const out = document.createElement('canvas');
-    out.width = width;
-    out.height = height;
-    const dst = out.getContext('2d').createImageData(width, height);
-    const map = homography(
-        [
-            { x: 0, y: 0 },
-            { x: width, y: 0 },
-            { x: width, y: height },
-            { x: 0, y: height },
-        ],
-        [
-            corners.topLeftCorner,
-            corners.topRightCorner,
-            corners.bottomRightCorner,
-            corners.bottomLeftCorner,
-        ],
-    );
-    const sourcePixels = srcImage.data;
-    const destPixels = dst.data;
-    const sourceWidth = source.width;
-    const sourceHeight = source.height;
-
-    for (let y = 0; y < height; y += 1) {
-        for (let x = 0; x < width; x += 1) {
-            const point = applyHomography(map, x, y);
-            const sx = point.x | 0;
-            const sy = point.y | 0;
-            const destIndex = (y * width + x) * 4;
-            destPixels[destIndex + 3] = 255;
-            if (sx < 0 || sy < 0 || sx >= sourceWidth || sy >= sourceHeight) {
-                destPixels[destIndex] = 255;
-                destPixels[destIndex + 1] = 255;
-                destPixels[destIndex + 2] = 255;
-                continue;
-            }
-            const sourceIndex = (sy * sourceWidth + sx) * 4;
-            destPixels[destIndex] = sourcePixels[sourceIndex];
-            destPixels[destIndex + 1] = sourcePixels[sourceIndex + 1];
-            destPixels[destIndex + 2] = sourcePixels[sourceIndex + 2];
-        }
-    }
-
-    out.getContext('2d').putImageData(dst, 0, 0);
-    return out;
-}
-
-function applyLook(canvas, look) {
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const pixels = image.data;
-
-    for (let index = 0; index < pixels.length; index += 4) {
-        const gray = 0.299 * pixels[index] + 0.587 * pixels[index + 1] + 0.114 * pixels[index + 2];
-        const value = look === 'photo'
-            ? gray
-            : (gray > 168 ? 255 : gray < 112 ? 0 : ((gray - 112) * 255) / 56);
-        pixels[index] = value;
-        pixels[index + 1] = value;
-        pixels[index + 2] = value;
-    }
-
-    ctx.putImageData(image, 0, 0);
-    return canvas;
-}
-
-export function rotateCanvas(source, turns) {
-    const steps = ((turns % 4) + 4) % 4;
-    if (steps === 0) {
-        return source;
-    }
-
-    const canvas = document.createElement('canvas');
-    const swap = steps % 2 === 1;
-    canvas.width = swap ? source.height : source.width;
-    canvas.height = swap ? source.width : source.height;
-    const ctx = canvas.getContext('2d');
-    ctx.translate(canvas.width / 2, canvas.height / 2);
-    ctx.rotate((steps * Math.PI) / 2);
-    ctx.drawImage(source, -source.width / 2, -source.height / 2);
-
-    return canvas;
-}
-
-export function renderScan(source, corners, look, turns) {
+export function renderScan(source, corners) {
     const size = pageSize(corners);
-    const warped = warpCanvas(source, corners, size.width, size.height);
-    return rotateCanvas(applyLook(warped, look), turns);
+    return warpWithOpenCv(source, corners, size.width, size.height);
 }
 
 export function canvasToJpeg(canvas, name) {
