@@ -1,5 +1,5 @@
-const PAPER_WIDTH = 1654;
-const PAPER_HEIGHT = 2339;
+const PAPER_WIDTH = 1100;
+const PAPER_HEIGHT = 1556;
 
 let enginePromise = null;
 
@@ -180,42 +180,129 @@ export function detectCorners(scanner, canvas) {
     }
 }
 
-function applyLook(canvas, look) {
-    const src = window.cv.imread(canvas);
-    const gray = new window.cv.Mat();
-    const out = document.createElement('canvas');
+function solve(rows) {
+    const n = rows.length;
+    const matrix = rows.map((row) => row.slice());
 
-    try {
-        window.cv.cvtColor(src, gray, window.cv.COLOR_RGBA2GRAY);
-        if (look === 'photo') {
-            window.cv.imshow(out, gray);
-            return out;
+    for (let col = 0; col < n; col += 1) {
+        let pivot = col;
+        for (let row = col + 1; row < n; row += 1) {
+            if (Math.abs(matrix[row][col]) > Math.abs(matrix[pivot][col])) {
+                pivot = row;
+            }
         }
-
-        const blur = new window.cv.Mat();
-        const bw = new window.cv.Mat();
-        try {
-            window.cv.GaussianBlur(gray, blur, new window.cv.Size(3, 3), 0);
-            window.cv.adaptiveThreshold(
-                blur,
-                bw,
-                255,
-                window.cv.ADAPTIVE_THRESH_GAUSSIAN_C,
-                window.cv.THRESH_BINARY,
-                61,
-                12,
-            );
-            window.cv.imshow(out, bw);
-        } finally {
-            blur.delete();
-            bw.delete();
+        [matrix[col], matrix[pivot]] = [matrix[pivot], matrix[col]];
+        const scale = matrix[col][col] || 1e-12;
+        for (let colIndex = col; colIndex <= n; colIndex += 1) {
+            matrix[col][colIndex] /= scale;
         }
-
-        return out;
-    } finally {
-        src.delete();
-        gray.delete();
+        for (let row = 0; row < n; row += 1) {
+            if (row === col) {
+                continue;
+            }
+            const factor = matrix[row][col];
+            for (let colIndex = col; colIndex <= n; colIndex += 1) {
+                matrix[row][colIndex] -= factor * matrix[col][colIndex];
+            }
+        }
     }
+
+    return matrix.map((row) => row[n]);
+}
+
+function homography(from, to) {
+    const rows = [];
+    from.forEach((point, index) => {
+        const x = point.x;
+        const y = point.y;
+        const X = to[index].x;
+        const Y = to[index].y;
+        rows.push([x, y, 1, 0, 0, 0, -X * x, -X * y, X]);
+        rows.push([0, 0, 0, x, y, 1, -Y * x, -Y * y, Y]);
+    });
+    const h = solve(rows);
+    h.push(1);
+    return h;
+}
+
+function applyHomography(h, x, y) {
+    const weight = h[6] * x + h[7] * y + h[8];
+    return {
+        x: (h[0] * x + h[1] * y + h[2]) / weight,
+        y: (h[3] * x + h[4] * y + h[5]) / weight,
+    };
+}
+
+export function projectPoint(from, to, x, y) {
+    return applyHomography(homography(from, to), x, y);
+}
+
+function warpCanvas(source, corners, width, height) {
+    const srcImage = source.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, source.width, source.height);
+    const out = document.createElement('canvas');
+    out.width = width;
+    out.height = height;
+    const dst = out.getContext('2d').createImageData(width, height);
+    const map = homography(
+        [
+            { x: 0, y: 0 },
+            { x: width, y: 0 },
+            { x: width, y: height },
+            { x: 0, y: height },
+        ],
+        [
+            corners.topLeftCorner,
+            corners.topRightCorner,
+            corners.bottomRightCorner,
+            corners.bottomLeftCorner,
+        ],
+    );
+    const sourcePixels = srcImage.data;
+    const destPixels = dst.data;
+    const sourceWidth = source.width;
+    const sourceHeight = source.height;
+
+    for (let y = 0; y < height; y += 1) {
+        for (let x = 0; x < width; x += 1) {
+            const point = applyHomography(map, x, y);
+            const sx = point.x | 0;
+            const sy = point.y | 0;
+            const destIndex = (y * width + x) * 4;
+            destPixels[destIndex + 3] = 255;
+            if (sx < 0 || sy < 0 || sx >= sourceWidth || sy >= sourceHeight) {
+                destPixels[destIndex] = 255;
+                destPixels[destIndex + 1] = 255;
+                destPixels[destIndex + 2] = 255;
+                continue;
+            }
+            const sourceIndex = (sy * sourceWidth + sx) * 4;
+            destPixels[destIndex] = sourcePixels[sourceIndex];
+            destPixels[destIndex + 1] = sourcePixels[sourceIndex + 1];
+            destPixels[destIndex + 2] = sourcePixels[sourceIndex + 2];
+        }
+    }
+
+    out.getContext('2d').putImageData(dst, 0, 0);
+    return out;
+}
+
+function applyLook(canvas, look) {
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const pixels = image.data;
+
+    for (let index = 0; index < pixels.length; index += 4) {
+        const gray = 0.299 * pixels[index] + 0.587 * pixels[index + 1] + 0.114 * pixels[index + 2];
+        const value = look === 'photo'
+            ? gray
+            : (gray > 168 ? 255 : gray < 112 ? 0 : ((gray - 112) * 255) / 56);
+        pixels[index] = value;
+        pixels[index + 1] = value;
+        pixels[index + 2] = value;
+    }
+
+    ctx.putImageData(image, 0, 0);
+    return canvas;
 }
 
 export function rotateCanvas(source, turns) {
@@ -236,15 +323,10 @@ export function rotateCanvas(source, turns) {
     return canvas;
 }
 
-export function renderScan(scanner, source, corners, look, turns) {
+export function renderScan(source, corners, look, turns) {
     const size = pageSize(corners);
-    const warped = scanner.extractPaper(source, size.width, size.height, corners);
-    if (!warped) {
-        return null;
-    }
-
-    const filtered = applyLook(warped, look);
-    return rotateCanvas(filtered, turns);
+    const warped = warpCanvas(source, corners, size.width, size.height);
+    return rotateCanvas(applyLook(warped, look), turns);
 }
 
 export function canvasToJpeg(canvas, name) {

@@ -22,7 +22,7 @@ export default function DocumentScanner({ locale, copy, room, onClose, onPage })
     const loopRef = useRef(0);
     const watchRef = useRef(0);
     const publishingRef = useRef(false);
-    const [phase, setPhase] = useState('boot');
+    const [phase, setPhase] = useState('camera');
     const [paperFound, setPaperFound] = useState(false);
     const [flash, setFlash] = useState(false);
     const phaseRef = useRef(phase);
@@ -49,34 +49,24 @@ export default function DocumentScanner({ locale, copy, room, onClose, onPage })
     }, []);
 
     useEffect(() => {
-        let cancelled = false;
-
-        loadScannerEngine()
-            .then((scanner) => {
-                if (cancelled) {
-                    return;
-                }
-                scannerRef.current = scanner;
-                setPhase('camera');
-            })
-            .catch(() => {
-                if (!cancelled) {
-                    setPhase('error');
-                }
-            });
-
-        return () => {
-            cancelled = true;
-        };
-    }, []);
-
-    useEffect(() => {
-        if (phase !== 'camera' || !scannerRef.current) {
+        if (phase !== 'camera') {
             return undefined;
         }
 
         let cancelled = false;
         openCamera()
+            .then(() => {
+                if (cancelled) {
+                    return;
+                }
+                loadScannerEngine()
+                    .then((scanner) => {
+                        if (!cancelled) {
+                            scannerRef.current = scanner;
+                        }
+                    })
+                    .catch(() => {});
+            })
             .catch((error) => {
                 if (cancelled) {
                     return;
@@ -94,7 +84,7 @@ export default function DocumentScanner({ locale, copy, room, onClose, onPage })
     }, [phase]);
 
     useEffect(() => {
-        if (phase !== 'preview' || !corners || !sourceRef.current || !scannerRef.current) {
+        if (phase !== 'preview' || !corners || !sourceRef.current) {
             return undefined;
         }
 
@@ -102,7 +92,7 @@ export default function DocumentScanner({ locale, copy, room, onClose, onPage })
         setBusy(true);
         const timer = window.setTimeout(() => {
             try {
-                const canvas = renderScan(scannerRef.current, sourceRef.current, corners, look, turns);
+                const canvas = renderScan(sourceRef.current, corners, look, turns);
                 if (!canvas || cancelled) {
                     return;
                 }
@@ -173,8 +163,7 @@ export default function DocumentScanner({ locale, copy, room, onClose, onPage })
             }
             const video = videoRef.current;
             const overlay = overlayRef.current;
-            const scanner = scannerRef.current;
-            if (!video || !overlay || !scanner || video.readyState < 2) {
+            if (!video || !overlay || video.readyState < 2) {
                 loopRef.current = window.setTimeout(tick, 280);
                 return;
             }
@@ -182,7 +171,8 @@ export default function DocumentScanner({ locale, copy, room, onClose, onPage })
             const frame = drawVideoFrame(video, 480);
             overlay.width = frame.width;
             overlay.height = frame.height;
-            const found = detectCorners(scanner, frame);
+            const scanner = scannerRef.current;
+            const found = scanner ? detectCorners(scanner, frame) : null;
             drawOutline(overlay.getContext('2d'), found, frame.width, frame.height);
             setPaperFound((current) => (current === Boolean(found) ? current : Boolean(found)));
             loopRef.current = window.setTimeout(tick, 280);
@@ -199,17 +189,17 @@ export default function DocumentScanner({ locale, copy, room, onClose, onPage })
 
     function capture() {
         const video = videoRef.current;
-        const scanner = scannerRef.current;
-        if (!video || !scanner || !video.videoWidth) {
+        if (!video || !video.videoWidth) {
             return;
         }
 
-        const frame = drawVideoFrame(video, 2000);
+        const frame = drawVideoFrame(video, 1600);
         setFlash(true);
         window.setTimeout(() => setFlash(false), 140);
         stopWatching();
         sourceRef.current = frame;
-        const found = detectCorners(scanner, frame);
+        const scanner = scannerRef.current;
+        const found = scanner ? detectCorners(scanner, frame) : null;
         const next = found || insetCorners(frame.width, frame.height);
         setCorners(next);
         setTurns(0);
@@ -277,9 +267,6 @@ export default function DocumentScanner({ locale, copy, room, onClose, onPage })
                 </button>
             </header>
 
-            {phase === 'boot' && (
-                <Status text={copy.scanPreparing} spin />
-            )}
             {(phase === 'denied' || phase === 'error') && (
                 <Status text={phase === 'denied' ? copy.scanCameraDenied : copy.scanFailed} />
             )}
