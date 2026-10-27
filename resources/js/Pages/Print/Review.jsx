@@ -565,7 +565,7 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
                             </span>
                         </button>
                     ) : (
-                        <div className="grid grid-cols-4 gap-1">
+                        <div className="grid grid-cols-2 gap-2">
                             {pages.map((page) => {
                                 const isActive = active?.id === page.id;
                                 const isDragging = draggingId === page.id;
@@ -573,39 +573,55 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
                                 return (
                                     <div
                                         key={page.id}
-                                        data-page-id={page.id}
-                                        onPointerDown={(event) => onCardPointerDown(event, page.id)}
-                                        onPointerMove={onCardPointerMove}
-                                        onPointerUp={(event) => onCardPointerUp(event, page.id)}
-                                        onPointerCancel={(event) => onCardPointerUp(event, page.id)}
-                                        className={`relative aspect-[210/297] touch-none overflow-hidden bg-white ${
+                                        className={`overflow-hidden bg-white ${
                                             isDragging
-                                                ? 'z-20 scale-[1.03] opacity-90 shadow-lg ring-2 ring-primary'
+                                                ? 'z-20 scale-[1.02] opacity-90 shadow-lg ring-2 ring-primary'
                                                 : isActive
                                                     ? 'ring-2 ring-primary ring-offset-1 ring-offset-[#eef7f2]'
                                                     : 'border border-emerald-900/10'
                                         }`}
                                     >
-                                        <div className="absolute inset-0">
-                                            <PageThumb
-                                                document={page.document}
-                                                pageNumber={page.number}
-                                                locale={locale}
-                                            />
+                                        <div
+                                            data-page-id={page.id}
+                                            onPointerDown={(event) => onCardPointerDown(event, page.id)}
+                                            onPointerMove={onCardPointerMove}
+                                            onPointerUp={(event) => onCardPointerUp(event, page.id)}
+                                            onPointerCancel={(event) => onCardPointerUp(event, page.id)}
+                                            className="relative aspect-[210/297] touch-none"
+                                        >
+                                            <div className="absolute inset-0">
+                                                <PageThumb
+                                                    document={page.document}
+                                                    pageNumber={page.number}
+                                                    locale={locale}
+                                                />
+                                            </div>
+                                            <span className="pointer-events-none absolute start-1.5 top-1.5 bg-primary px-1.5 py-0.5 font-mono text-[11px] font-semibold text-white">
+                                                {page.index}
+                                            </span>
+                                            <span className="pointer-events-none absolute bottom-1.5 start-1.5 flex h-6 w-6 items-center justify-center bg-ink/70 text-white">
+                                                <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+                                                    <circle cx="5" cy="4" r="1.2" />
+                                                    <circle cx="11" cy="4" r="1.2" />
+                                                    <circle cx="5" cy="8" r="1.2" />
+                                                    <circle cx="11" cy="8" r="1.2" />
+                                                    <circle cx="5" cy="12" r="1.2" />
+                                                    <circle cx="11" cy="12" r="1.2" />
+                                                </svg>
+                                            </span>
+                                            <button
+                                                type="button"
+                                                data-no-drag
+                                                aria-label={t.remove}
+                                                onClick={(event) => {
+                                                    event.stopPropagation();
+                                                    removePage(page.id);
+                                                }}
+                                                className="absolute end-1.5 top-1.5 z-10 flex h-8 w-8 items-center justify-center bg-white text-[18px] leading-none text-ink shadow"
+                                            >
+                                                ×
+                                            </button>
                                         </div>
-                                        <span className="pointer-events-none absolute start-1 top-1 bg-primary px-1 py-0.5 font-mono text-[9px] font-semibold text-white">
-                                            {page.index}
-                                        </span>
-                                        <span className="pointer-events-none absolute bottom-1 start-1 flex h-4 w-4 items-center justify-center rounded bg-ink/70 text-white">
-                                            <svg className="h-2.5 w-2.5" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
-                                                <circle cx="5" cy="4" r="1.2" />
-                                                <circle cx="11" cy="4" r="1.2" />
-                                                <circle cx="5" cy="8" r="1.2" />
-                                                <circle cx="11" cy="8" r="1.2" />
-                                                <circle cx="5" cy="12" r="1.2" />
-                                                <circle cx="11" cy="12" r="1.2" />
-                                            </svg>
-                                        </span>
                                         <CopyStepper
                                             value={Number(page.copies) || 1}
                                             max={maxCopies}
@@ -613,18 +629,6 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
                                             moreLabel={t.copiesMore}
                                             onChange={(next) => setCopies(page.id, next)}
                                         />
-                                        <button
-                                            type="button"
-                                            data-no-drag
-                                            aria-label={t.remove}
-                                            onClick={(event) => {
-                                                event.stopPropagation();
-                                                removePage(page.id);
-                                            }}
-                                            className="absolute end-1 top-1 z-10 flex h-5 w-5 items-center justify-center bg-white/95 text-[12px] leading-none text-ink shadow"
-                                        >
-                                            ×
-                                        </button>
                                     </div>
                                 );
                             })}
@@ -662,9 +666,7 @@ function CopyStepper({ value, max, onChange, lessLabel, moreLabel }) {
     return (
         <div
             data-no-drag
-            className={`absolute bottom-1 end-1 z-10 flex items-stretch shadow-sm ${
-                raised ? 'bg-primary text-white' : 'bg-white/95 text-ink'
-            }`}
+            className="flex items-stretch border-t border-emerald-900/10 bg-white"
             onPointerDown={(event) => event.stopPropagation()}
         >
             <button
@@ -676,12 +678,12 @@ function CopyStepper({ value, max, onChange, lessLabel, moreLabel }) {
                     event.stopPropagation();
                     onChange(value - 1);
                 }}
-                className="flex h-6 w-5 items-center justify-center text-[14px] font-bold leading-none disabled:opacity-30"
+                className="flex h-12 w-12 items-center justify-center text-[26px] font-semibold leading-none text-ink disabled:text-emerald-200"
             >
                 −
             </button>
-            <span className="flex h-6 min-w-[0.9rem] items-center justify-center font-mono text-[10px] font-bold tabular-nums">
-                {value}
+            <span className={`flex h-12 flex-1 items-center justify-center font-mono text-[20px] font-bold tabular-nums ${raised ? 'text-primary' : 'text-ink'}`}>
+                ×{value}
             </span>
             <button
                 type="button"
@@ -692,7 +694,7 @@ function CopyStepper({ value, max, onChange, lessLabel, moreLabel }) {
                     event.stopPropagation();
                     onChange(value + 1);
                 }}
-                className="flex h-6 w-5 items-center justify-center text-[14px] font-bold leading-none disabled:opacity-30"
+                className="flex h-12 w-12 items-center justify-center text-[26px] font-semibold leading-none text-primary disabled:text-emerald-200"
             >
                 +
             </button>
