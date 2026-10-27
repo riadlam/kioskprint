@@ -210,16 +210,16 @@ export default function Select({ limits }) {
                         <h1 className="text-[15px] font-semibold tracking-tight text-white">{t.chooseTitle}</h1>
                         <p className="mt-0.5 text-[11px] text-white/75">{t.chooseHint}</p>
                     </div>
-                    {items.length > 0 && (
-                        <div className="flex gap-1.5">
-                            <button
-                                type="button"
-                                onClick={() => setScanning(true)}
-                                disabled={!canScan}
-                                className="border border-white/25 bg-white/10 px-3 py-2 text-[11px] font-semibold text-white disabled:opacity-40"
-                            >
-                                {t.scanShort}
-                            </button>
+                    <div className="flex gap-1.5">
+                        <button
+                            type="button"
+                            onClick={() => setScanning(true)}
+                            disabled={!canScan}
+                            className="border border-white/25 bg-white/10 px-3 py-2 text-[11px] font-semibold text-white disabled:opacity-40"
+                        >
+                            {t.scanShort}
+                        </button>
+                        {items.length > 0 && (
                             <button
                                 type="button"
                                 onClick={requestAccess}
@@ -227,8 +227,8 @@ export default function Select({ limits }) {
                             >
                                 {t.importShort}
                             </button>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
 
                 <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center px-4 pb-4">
@@ -272,8 +272,16 @@ export default function Select({ limits }) {
                         </div>
                     ) : (
                         <div className="flex h-full w-full flex-col items-center justify-center border border-dashed border-white/30 bg-white/10 px-6 text-center">
-                            <p className="text-sm font-medium text-white">{t.previewEmpty}</p>
-                            <p className="mt-1 text-[11px] text-white/70">{t.limits(limits.max_files, mb)}</p>
+                            <p className="text-sm font-medium text-white">{t.scanButton}</p>
+                            <p className="mt-1 text-[11px] text-white/70">{t.scanHint}</p>
+                            <button
+                                type="button"
+                                onClick={() => setScanning(true)}
+                                disabled={!canScan}
+                                className="mt-4 h-12 w-full max-w-xs bg-white text-[14px] font-semibold text-primary disabled:opacity-40"
+                            >
+                                {t.scanButton}
+                            </button>
                         </div>
                     )}
                 </div>
@@ -325,22 +333,22 @@ export default function Select({ limits }) {
                                     <path d="M8.5 7.5 12 4l3.5 3.5" strokeLinecap="round" strokeLinejoin="round" />
                                 </svg>
                             </div>
-                            <p className="text-[14px] font-semibold text-ink">{t.grantAccess}</p>
-                            <p className="mt-1 max-w-[16rem] text-[12px] leading-relaxed text-slate">{t.grantAccessHint}</p>
-                            <button
-                                type="button"
-                                onClick={requestAccess}
-                                className="mt-5 h-12 w-full max-w-xs bg-primary text-[13px] font-semibold text-white"
-                            >
-                                {t.grantAccess}
-                            </button>
+                            <p className="text-[14px] font-semibold text-ink">{t.scanButton}</p>
+                            <p className="mt-1 max-w-[16rem] text-[12px] leading-relaxed text-slate">{t.scanHint}</p>
                             <button
                                 type="button"
                                 onClick={() => setScanning(true)}
                                 disabled={!canScan}
-                                className="mt-2 h-12 w-full max-w-xs border border-primary text-[13px] font-semibold text-primary disabled:opacity-40"
+                                className="mt-5 h-12 w-full max-w-xs bg-primary text-[13px] font-semibold text-white disabled:opacity-40"
                             >
                                 {t.scanButton}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={requestAccess}
+                                className="mt-2 h-12 w-full max-w-xs border border-primary text-[13px] font-semibold text-primary"
+                            >
+                                {t.grantAccess}
                             </button>
                             <p className="mt-3 text-[10px] font-medium text-primary/80">{t.formats}</p>
                         </div>
