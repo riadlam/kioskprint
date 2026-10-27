@@ -164,6 +164,21 @@ export function drawVideoFrame(video, maxEdge) {
     return canvas;
 }
 
+const CORNER_KEYS = ['topLeftCorner', 'topRightCorner', 'bottomRightCorner', 'bottomLeftCorner'];
+
+export function pageInsideFrame(corners, width, height) {
+    const margin = Math.min(width, height) * 0.02;
+    return CORNER_KEYS.every((key) => {
+        const point = corners[key];
+        return point.x > margin && point.y > margin && point.x < width - margin && point.y < height - margin;
+    });
+}
+
+export function cornersHoldStill(previous, next, width, height) {
+    const limit = Math.hypot(width, height) * 0.02;
+    return CORNER_KEYS.every((key) => Math.hypot(previous[key].x - next[key].x, previous[key].y - next[key].y) <= limit);
+}
+
 export function detectCorners(scanner, canvas) {
     const img = window.cv.imread(canvas);
     try {

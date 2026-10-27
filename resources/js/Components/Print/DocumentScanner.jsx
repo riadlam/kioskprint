@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
     canvasToJpeg,
+    cornersHoldStill,
     detectCorners,
     drawOutline,
     drawVideoFrame,
     insetCorners,
+    pageInsideFrame,
     loadScannerEngine,
     renderScan,
 } from '../../lib/documentScan';
@@ -22,8 +24,11 @@ export default function DocumentScanner({ locale, copy, room, onClose, onPage })
     const loopRef = useRef(0);
     const watchRef = useRef(0);
     const publishingRef = useRef(false);
+    const capturingRef = useRef(false);
+    const steadyRef = useRef({ count: 0, corners: null });
     const [phase, setPhase] = useState('camera');
     const [paperFound, setPaperFound] = useState(false);
+    const [hold, setHold] = useState(0);
     const [flash, setFlash] = useState(false);
     const phaseRef = useRef(phase);
     phaseRef.current = phase;
@@ -175,6 +180,11 @@ export default function DocumentScanner({ locale, copy, room, onClose, onPage })
             const found = scanner ? detectCorners(scanner, frame) : null;
             drawOutline(overlay.getContext('2d'), found, frame.width, frame.height);
             setPaperFound((current) => (current === Boolean(found) ? current : Boolean(found)));
+            const ready = noteSteady(found, frame.width, frame.height);
+            if (ready) {
+                capture();
+                return;
+            }
             loopRef.current = window.setTimeout(tick, 280);
         };
         tick();
@@ -187,11 +197,29 @@ export default function DocumentScanner({ locale, copy, room, onClose, onPage })
         streamRef.current = null;
     }
 
+    function noteSteady(found, width, height) {
+        if (!found || !pageInsideFrame(found, width, height)) {
+            steadyRef.current = { count: 0, corners: null };
+            setHold((current) => (current === 0 ? current : 0));
+            return false;
+        }
+
+        const previous = steadyRef.current.corners;
+        const still = previous && cornersHoldStill(previous, found, width, height);
+        const count = still ? steadyRef.current.count + 1 : 1;
+        steadyRef.current = { count, corners: found };
+        setHold((current) => (current === count ? current : count));
+        return count >= 4;
+    }
+
     function capture() {
         const video = videoRef.current;
-        if (!video || !video.videoWidth) {
+        if (capturingRef.current || !video || !video.videoWidth) {
             return;
         }
+        capturingRef.current = true;
+        steadyRef.current = { count: 0, corners: null };
+        setHold(0);
 
         const frame = drawVideoFrame(video, 1600);
         setFlash(true);
@@ -245,6 +273,9 @@ export default function DocumentScanner({ locale, copy, room, onClose, onPage })
         setCorners(null);
         setMessage('');
         setPaperFound(false);
+        setHold(0);
+        capturingRef.current = false;
+        steadyRef.current = { count: 0, corners: null };
         setPreviewUrl((current) => {
             if (current) {
                 URL.revokeObjectURL(current);
@@ -283,12 +314,13 @@ export default function DocumentScanner({ locale, copy, room, onClose, onPage })
                             {flash && <span className="pointer-events-none absolute inset-0 bg-white" />}
                         </div>
                     </div>
-                    <p className="px-6 pt-3 text-center text-[12px] text-white/75">{copy.scanHint}</p>
+                    <p className="px-6 pt-3 text-center text-[12px] text-white/75">{hold >= 2 ? copy.scanSteady : copy.scanHint}</p>
                     <div className="flex justify-center px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4">
                         <button
                             type="button"
                             onClick={capture}
-                            className="h-16 w-16 rounded-full border-4 border-white bg-white/20"
+                            className="h-16 w-16 rounded-full border-4 border-white"
+                            style={{ backgroundColor: `rgba(255,255,255,${0.2 + Math.min(hold, 4) * 0.2})` }}
                             aria-label={copy.scanCapture}
                         />
                     </div>
