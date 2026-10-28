@@ -67,6 +67,7 @@ Route::match(['GET', 'OPTIONS'], '/kiosk/{kiosk}/jobs/{job}', KioskPrintStatusCo
 Route::post('/kiosk/{kiosk}/coins', KioskCoinController::class)
     ->name('kiosk.coins.store');
 Route::post('/kiosk/{kiosk}/desk', [KioskDeskController::class, 'publish'])->name('kiosk.desk.publish');
+Route::post('/kiosk/{kiosk}/jobs/{job}/cancel', [KioskDeskController::class, 'cancel'])->name('kiosk.jobs.cancel');
 
 Route::match(['GET', 'POST'], '/print/pay/satim/return', [PrintPaymentController::class, 'satimReturn'])
     ->name('print.satim.return');

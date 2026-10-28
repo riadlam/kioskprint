@@ -140,7 +140,7 @@ class DeskCodeTest extends TestCase
         $job->refresh();
         $this->assertSame('awaiting_payment', $job->status);
 
-        $this->travel(91)->seconds();
+        $this->travel(21)->seconds();
         (new ExpireUnpaidPrint($job->id))->handle();
 
         $job->refresh();

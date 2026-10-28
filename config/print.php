@@ -31,6 +31,8 @@ return [
     'debug_desk_code' => env('PRINT_DEBUG_DESK_CODE', '241'),
     /** Phone order access ends after this many minutes without a page request. */
     'session_minutes' => 10,
+    /** Coin screen returns home after this many seconds without another coin. */
+    'coin_hold_seconds' => (int) env('PRINT_COIN_HOLD_SECONDS', 20),
     /**
      * Kiosk bound to a plain /print visit. The address people type and scan
      * stays https://metbati.com/print; this id is stored in the session.

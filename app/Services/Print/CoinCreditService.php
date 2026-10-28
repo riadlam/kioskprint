@@ -2,8 +2,10 @@
 
 namespace App\Services\Print;
 
+use App\Events\PrintJobFailed;
 use App\Events\PrintJobPaid;
 use App\Events\PrintJobPaymentProgress;
+use App\Jobs\ExpireUnpaidPrint;
 use App\Jobs\PrintKioskJob;
 use App\Models\CoinEvent;
 use App\Models\PrintJob;
@@ -158,6 +160,9 @@ class CoinCreditService
 
         if ($outcome['kind'] === 'credited' && $job) {
             $this->broadcastSafely(new PrintJobPaymentProgress($job));
+            ExpireUnpaidPrint::dispatch($job->id)->delay(
+                now()->addSeconds(max(5, (int) config('print.coin_hold_seconds', 20)))
+            );
         }
 
         if ($outcome['kind'] === 'paid' && $job) {
@@ -184,6 +189,31 @@ class CoinCreditService
     private function emptyView(string $result): array
     {
         return $this->view(null, $result);
+    }
+
+    public function abandon(PrintJob $job): bool
+    {
+        $failed = false;
+
+        DB::transaction(function () use ($job, &$failed) {
+            $locked = PrintJob::query()->whereKey($job->id)->lockForUpdate()->first();
+
+            if (! $locked || $locked->status !== 'awaiting_payment' || $locked->payment_method !== 'monnayeur') {
+                return;
+            }
+
+            $locked->update(['status' => 'failed']);
+            $failed = true;
+        });
+
+        if ($failed) {
+            $fresh = $job->fresh();
+            if ($fresh) {
+                $this->broadcastSafely(new PrintJobFailed($fresh, 'abandoned'));
+            }
+        }
+
+        return $failed;
     }
 
     private function due(PrintJob $job): int

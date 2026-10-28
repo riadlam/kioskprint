@@ -328,7 +328,9 @@ class PrintPaymentController extends Controller
         if ($result === 'awaiting' && $data['payment_method'] === 'monnayeur') {
             $job->refresh();
             $this->broadcastSafely(new PrintJobAwaitingPayment($job));
-            ExpireUnpaidPrint::dispatch($job->id)->delay(now()->addSeconds(90));
+            ExpireUnpaidPrint::dispatch($job->id)->delay(
+                now()->addSeconds(max(5, (int) config('print.coin_hold_seconds', 20)))
+            );
         }
 
         return redirect()

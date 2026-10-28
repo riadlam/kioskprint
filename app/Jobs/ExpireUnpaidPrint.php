@@ -2,11 +2,10 @@
 
 namespace App\Jobs;
 
-use App\Events\PrintJobFailed;
 use App\Models\PrintJob;
+use App\Services\Print\CoinCreditService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Throwable;
 
 class ExpireUnpaidPrint implements ShouldQueue
 {
@@ -22,20 +21,12 @@ class ExpireUnpaidPrint implements ShouldQueue
             return;
         }
 
-        if ((float) $job->amount_inserted > 0) {
+        $seconds = max(5, (int) config('print.coin_hold_seconds', 20));
+
+        if ($job->updated_at !== null && $job->updated_at->gt(now()->subSeconds($seconds))) {
             return;
         }
 
-        if ($job->updated_at !== null && $job->updated_at->gt(now()->subSeconds(90))) {
-            return;
-        }
-
-        $job->update(['status' => 'failed']);
-
-        try {
-            broadcast(new PrintJobFailed($job));
-        } catch (Throwable $exception) {
-            report($exception);
-        }
+        app(CoinCreditService::class)->abandon($job);
     }
 }

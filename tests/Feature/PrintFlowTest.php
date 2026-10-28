@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\ExpireUnpaidPrint;
 use App\Services\Print\KioskDeskCodes;
 use Database\Seeders\PrintTemplateSeeder;
 use App\Models\CoinEvent;
@@ -699,6 +700,58 @@ class PrintFlowTest extends TestCase
             'pulses' => 1,
             'event_key' => 'coin-no-token1',
         ])->assertUnauthorized();
+    }
+
+    public function test_a_partial_coin_payment_closes_after_twenty_seconds(): void
+    {
+        Storage::fake('local');
+        config([
+            'print.simulate_monnayeur' => false,
+            'print.kiosk_coin_token' => 'test-token',
+            'print.coin_hold_seconds' => 20,
+        ]);
+
+        $job = $this->openCashJob('kiosk-hold', 100);
+        $this->coin('kiosk-hold', 3, 'coin-hold-20da')->assertJson([
+            'result' => 'credited',
+            'inserted' => 20,
+            'remaining' => 80,
+        ]);
+
+        $this->travel(10)->seconds();
+        (new ExpireUnpaidPrint($job->id))->handle();
+        $this->assertSame('awaiting_payment', $job->fresh()->status);
+
+        $this->travel(21)->seconds();
+        (new ExpireUnpaidPrint($job->id))->handle();
+
+        $job->refresh();
+        $this->assertSame('failed', $job->status);
+        $this->assertSame(20, (int) round((float) $job->amount_inserted));
+        $this->assertSame([], $this->printer()->units);
+    }
+
+    public function test_the_tablet_home_button_closes_an_open_coin_payment(): void
+    {
+        Storage::fake('local');
+        config([
+            'print.simulate_monnayeur' => false,
+            'print.kiosk_coin_token' => 'test-token',
+            'print.desk_token' => 'desk-token',
+        ]);
+
+        $job = $this->openCashJob('kiosk-home', 100);
+        $this->coin('kiosk-home', 2, 'coin-home-10da')->assertJson(['inserted' => 10]);
+
+        $this->postJson('/kiosk/kiosk-home/jobs/'.$job->id.'/cancel')
+            ->assertUnauthorized();
+
+        $this->withHeader('X-Kiosk-Desk', 'desk-token')
+            ->postJson('/kiosk/kiosk-home/jobs/'.$job->id.'/cancel')
+            ->assertOk();
+
+        $this->assertSame('failed', $job->fresh()->status);
+        $this->assertSame([], $this->printer()->units);
     }
 
     private function openAtKiosk(string $kioskId): void

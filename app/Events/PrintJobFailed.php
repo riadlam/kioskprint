@@ -13,7 +13,7 @@ class PrintJobFailed implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public function __construct(public PrintJob $job) {}
+    public function __construct(public PrintJob $job, public string $reason = '') {}
 
     public function broadcastOn(): array
     {
@@ -33,6 +33,7 @@ class PrintJobFailed implements ShouldBroadcastNow
             'success' => false,
             'page_count' => (int) $this->job->page_count,
             'status' => $this->job->status,
+            'reason' => $this->reason,
         ];
     }
 }

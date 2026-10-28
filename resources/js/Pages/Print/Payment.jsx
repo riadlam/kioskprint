@@ -20,6 +20,8 @@ export default function Payment({ job, quote, methods, cardMinimum = 75 }) {
     const [pagesDone, setPagesDone] = useState(() => Number(job.printed_pages || 0));
     const [pageTotal, setPageTotal] = useState(() => Number(quote.page_count || job.page_count || 0));
     const [onChooser, setOnChooser] = useState(false);
+    const [paymentEnded, setPaymentEnded] = useState('');
+    const [holdSeconds, setHoldSeconds] = useState(20);
     const required = Number(quote.amount || 0);
     const remaining = Math.max(0, Math.round((required - inserted) * 100) / 100);
     const progress = required > 0 ? Math.min(1, inserted / required) : 0;
@@ -85,6 +87,7 @@ export default function Payment({ job, quote, methods, cardMinimum = 75 }) {
             if (!sameJob(event)) {
                 return;
             }
+            setPaymentEnded(event.reason === 'abandoned' ? 'abandoned' : 'print');
             setPhase('failed');
         });
 
@@ -118,6 +121,19 @@ export default function Payment({ job, quote, methods, cardMinimum = 75 }) {
             : monnayeurActive
                 ? 'cash'
                 : 'poste';
+
+    useEffect(() => {
+        if (screen !== 'cash') {
+            return undefined;
+        }
+
+        setHoldSeconds(20);
+        const timer = setInterval(() => {
+            setHoldSeconds((current) => (current <= 1 ? 0 : current - 1));
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [screen, inserted]);
 
     const meta = {
         monnayeur: {
@@ -236,7 +252,8 @@ export default function Payment({ job, quote, methods, cardMinimum = 75 }) {
                                         <p className="mt-0.5 text-[1.15rem] font-black tabular-nums text-ink">{formatMoney(remaining, locale)}</p>
                                     </div>
                                 </div>
-                                <div className="mt-4">
+                                <p className="mt-4 text-center text-[15px] font-black tabular-nums text-ink">{t.payHold(holdSeconds)}</p>
+                                <div className="mt-3">
                                     <div className="mb-1 flex items-center justify-between text-[11px] font-semibold text-slate">
                                         <span>{t.payDue}: {formatMoney(required, locale)}</span>
                                         <span>{Math.round(progress * 100)}%</span>
@@ -284,8 +301,8 @@ export default function Payment({ job, quote, methods, cardMinimum = 75 }) {
                                         <path d="M4 4l16 16" />
                                     </svg>
                                 </span>
-                                <p className="mt-4 text-[1.25rem] font-black text-ink">{t.payFailedTitle}</p>
-                                <p className="mt-2 text-[13px] font-medium leading-5 text-slate">{t.payFailedBody}</p>
+                                <p className="mt-4 text-[1.25rem] font-black text-ink">{paymentEnded === 'abandoned' ? t.payHoldExpiredTitle : t.payFailedTitle}</p>
+                                <p className="mt-2 text-[13px] font-medium leading-5 text-slate">{paymentEnded === 'abandoned' ? t.payHoldExpiredBody : t.payFailedBody}</p>
                                 <Link
                                     href="/print"
                                     className="mt-5 inline-flex h-12 items-center justify-center rounded-2xl bg-primary px-5 text-[15px] font-black text-white"
