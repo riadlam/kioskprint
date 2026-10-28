@@ -30,6 +30,9 @@ class PrintJob extends Model
         'payment_method',
         'paid_at',
         'telegram_message_id',
+        'sofizpay_transaction_id',
+        'cib_order_number',
+        'cib_order_id',
     ];
 
     protected function casts(): array

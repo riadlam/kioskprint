@@ -26,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'kiosk/*/ready',
             'kiosk/*/units/*',
             'telegram/webhook/*',
+            'print/pay/satim/return',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

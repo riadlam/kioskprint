@@ -101,6 +101,18 @@ class PrintJobSession
             && ($desk['open'] ?? false) === true;
     }
 
+    public function resume(PrintJob $job): void
+    {
+        $ids = session('print_job_ids', []);
+        $ids[] = $job->id;
+
+        session([
+            'print_kiosk_id' => $job->kiosk_id,
+            'print_job_ids' => array_values(array_unique($ids)),
+            'print_seen_at' => now()->getTimestamp(),
+        ]);
+    }
+
     public function consumeDesk(): void
     {
         $desk = session('print_desk', []);

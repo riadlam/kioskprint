@@ -68,6 +68,9 @@ Route::post('/kiosk/{kiosk}/coins', KioskCoinController::class)
     ->name('kiosk.coins.store');
 Route::post('/kiosk/{kiosk}/desk', [KioskDeskController::class, 'publish'])->name('kiosk.desk.publish');
 
+Route::match(['GET', 'POST'], '/print/pay/satim/return', [PrintPaymentController::class, 'satimReturn'])
+    ->name('print.satim.return');
+
 Route::middleware('print.session')->group(function () {
     Route::post('/print/desk', [KioskDeskController::class, 'claim'])->name('print.desk');
 

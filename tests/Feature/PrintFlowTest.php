@@ -125,12 +125,11 @@ class PrintFlowTest extends TestCase
 
         $this->post(route('print.pay.store', $job), [
             'payment_method' => 'algerie_poste',
-        ])->assertRedirect(route('print.pay', $job));
+        ])->assertSessionHasErrors('payment_method');
 
         $job->refresh();
-        $this->assertSame('algerie_poste', $job->payment_method);
-        $this->assertSame('awaiting_payment', $job->status);
-        $this->assertEquals(20, (float) $job->amount);
+        $this->assertSame('reviewing', $job->status);
+        $this->assertNull($job->payment_method);
     }
 
     public function test_print_create_captures_kiosk_id(): void

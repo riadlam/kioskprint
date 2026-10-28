@@ -14,7 +14,9 @@ use App\Http\Requests\StorePrintFilesRequest;
 use App\Services\Print\PrintDocumentStore;
 use App\Services\Print\PrintJobSession;
 use App\Services\Print\PrintPricing;
+use App\Services\SofizPay\SofizPayClient;
 use App\Services\Telegram\OrderNotifier;
+use Illuminate\Support\Facades\Crypt;
 use Throwable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -32,6 +34,7 @@ class PrintPaymentController extends Controller
         private PrintDocumentStore $documents,
         private CoinCreditService $credits,
         private OrderNotifier $telegram,
+        private SofizPayClient $sofizPay,
     ) {}
 
     public function begin(Request $request, PrintJob $job): RedirectResponse
@@ -148,6 +151,7 @@ class PrintPaymentController extends Controller
                 'kiosk_id' => $job->kiosk_id,
             ],
             'quote' => $quote,
+            'cardMinimum' => $this->sofizPay->minAmount(),
             'methods' => [
                 [
                     'id' => 'monnayeur',
@@ -182,7 +186,7 @@ class PrintPaymentController extends Controller
         $result = DB::transaction(function () use ($job, $data, &$replaced) {
             $locked = PrintJob::query()->whereKey($job->id)->lockForUpdate()->first();
 
-            if (! $locked || $locked->status !== 'reviewing') {
+            if (! $locked || ! in_array($locked->status, ['reviewing', 'awaiting_payment'], true)) {
                 return 'already';
             }
 
@@ -204,13 +208,30 @@ class PrintPaymentController extends Controller
 
             $emulatePoste = $data['payment_method'] === 'algerie_poste'
                 && config('print.emulate_poste_paid');
+            $satim = $data['payment_method'] === 'algerie_poste' && ! $emulatePoste;
+
+            if ($locked->status === 'awaiting_payment' && ! $satim) {
+                return 'already';
+            }
+
+            if ($locked->status === 'awaiting_payment' && (float) $locked->amount_inserted > 0) {
+                return 'already';
+            }
 
             if ($data['payment_method'] === 'monnayeur' && ! $locked->kiosk_id) {
                 return 'no_kiosk';
             }
 
-            if ($emulatePoste && ! $locked->kiosk_id) {
+            if (($emulatePoste || $satim) && ! $locked->kiosk_id) {
                 return 'no_kiosk';
+            }
+
+            if ($satim && $quote['amount'] < $this->sofizPay->minAmount()) {
+                return 'below_minimum';
+            }
+
+            if ($satim && ! $this->sofizPay->isConfigured()) {
+                return 'sofiz_unavailable';
             }
 
             if ($data['payment_method'] === 'monnayeur') {
@@ -247,8 +268,20 @@ class PrintPaymentController extends Controller
                 'print_manifest' => ['page_ids' => $pageIds],
             ])->save();
 
-            return $emulatePoste ? 'print' : 'awaiting';
+            return $satim ? 'satim' : ($emulatePoste ? 'print' : 'awaiting');
         });
+
+        if ($result === 'below_minimum') {
+            return back()->withErrors([
+                'payment_method' => 'card_minimum',
+            ]);
+        }
+
+        if ($result === 'sofiz_unavailable') {
+            return back()->withErrors([
+                'payment_method' => 'card_unavailable',
+            ]);
+        }
 
         if ($result === 'no_kiosk') {
             return back()->withErrors([
@@ -288,6 +321,10 @@ class PrintPaymentController extends Controller
             PrintKioskJob::dispatch($job->id);
         }
 
+        if ($result === 'satim') {
+            return $this->openSatim($job);
+        }
+
         if ($result === 'awaiting' && $data['payment_method'] === 'monnayeur') {
             $job->refresh();
             $this->broadcastSafely(new PrintJobAwaitingPayment($job));
@@ -297,6 +334,62 @@ class PrintPaymentController extends Controller
         return redirect()
             ->route('print.pay', $job)
             ->with('payment_started', $data['payment_method']);
+    }
+
+    public function satimReturn(Request $request): RedirectResponse
+    {
+        $job = $this->jobFromReturn($request);
+
+        if (! $job || ! is_string($job->cib_order_number) || $job->cib_order_number === '') {
+            return redirect()->route('print.create');
+        }
+
+        if ($this->callbackSignatureRejected($request)) {
+            return redirect()->route('print.create');
+        }
+
+        if (in_array($job->status, ['paid', 'printing', 'printed'], true)) {
+            $this->session->resume($job);
+
+            return redirect()->route('print.pay', $job);
+        }
+
+        $check = $this->sofizPay->check($job->cib_order_number);
+        $data = $check['data'];
+
+        if (! $check['success'] || ! $this->sofizPay->isPaid($data) || ! $this->amountMatches($job, $data) || ! $this->merchantMatches($data)) {
+            return redirect()->route('print.create');
+        }
+
+        $paid = $this->sofizPay->paidAmount($data);
+        $start = false;
+
+        DB::transaction(function () use ($job, $paid, &$start) {
+            $locked = PrintJob::query()->whereKey($job->id)->lockForUpdate()->first();
+
+            if (! $locked || in_array($locked->status, ['paid', 'printing', 'printed'], true)) {
+                return;
+            }
+
+            $locked->forceFill([
+                'status' => 'paid',
+                'amount_inserted' => $paid,
+                'paid_at' => now(),
+            ])->save();
+            $start = true;
+        });
+
+        $job->refresh();
+
+        if ($start) {
+            $this->telegram->complete($job);
+            $this->broadcastSafely(new PrintJobPaid($job));
+            PrintKioskJob::dispatch($job->id);
+        }
+
+        $this->session->resume($job);
+
+        return redirect()->route('print.pay', $job);
     }
 
     public function status(PrintJob $job): JsonResponse|RedirectResponse
@@ -315,6 +408,105 @@ class PrintPaymentController extends Controller
         }
 
         return response()->json($this->credits->view($job));
+    }
+
+    private function openSatim(PrintJob $job): RedirectResponse
+    {
+        $job->refresh();
+        $return = route('print.satim.return', [], true)
+            .'?eid='.rawurlencode(Crypt::encryptString($job->id));
+
+        $created = $this->sofizPay->create([
+            'account' => $this->sofizPay->merchantAccount(),
+            'amount' => number_format((float) $job->amount, 2, '.', ''),
+            'full_name' => 'Metbati',
+            'phone' => '+213000000000',
+            'email' => 'pay@metbati.com',
+            'return_url' => $return,
+            'memo' => 'MB'.substr(str_replace('-', '', $job->id), 0, 18),
+            'redirect' => (string) config('services.sofizpay.redirect', 'no'),
+            'keep_return_url' => (string) config('services.sofizpay.keep_return_url', 'True'),
+        ]);
+
+        $data = $created['data'];
+        $paymentUrl = $data['payment_url'] ?? null;
+        $orderNumber = isset($data['cib_transaction_id']) ? (string) $data['cib_transaction_id'] : '';
+
+        if (! $created['success'] || $orderNumber === '' || ! is_string($paymentUrl) || filter_var($paymentUrl, FILTER_VALIDATE_URL) === false) {
+            $job->update([
+                'status' => 'reviewing',
+                'payment_method' => null,
+            ]);
+
+            return back()->withErrors([
+                'payment_method' => 'card_unavailable',
+            ]);
+        }
+
+        $orderId = null;
+        if (isset($data['cib_response']) && is_array($data['cib_response'])) {
+            $orderId = $data['cib_response']['orderId'] ?? null;
+        }
+
+        $job->update([
+            'sofizpay_transaction_id' => isset($data['transaction_id']) ? (string) $data['transaction_id'] : null,
+            'cib_order_number' => $orderNumber,
+            'cib_order_id' => is_string($orderId) && $orderId !== '' ? $orderId : null,
+        ]);
+
+        $this->telegram->pendingMethod($job->fresh());
+
+        return redirect()->away($paymentUrl);
+    }
+
+    private function jobFromReturn(Request $request): ?PrintJob
+    {
+        $eid = (string) $request->input('eid', '');
+
+        if ($eid === '') {
+            return null;
+        }
+
+        try {
+            $id = Crypt::decryptString($eid);
+        } catch (Throwable) {
+            return null;
+        }
+
+        return is_string($id) ? PrintJob::query()->find($id) : null;
+    }
+
+    private function callbackSignatureRejected(Request $request): bool
+    {
+        $message = $request->input('message');
+        $signature = $request->input('signature_url_safe', $request->input('signature'));
+
+        if (! is_string($message) || $message === '' || ! is_string($signature) || $signature === '') {
+            return false;
+        }
+
+        return ! $this->sofizPay->signatureIsValid($message, $signature);
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function amountMatches(PrintJob $job, array $data): bool
+    {
+        $paid = $this->sofizPay->paidAmount($data);
+
+        return $paid !== null && abs($paid - round((float) $job->amount, 2)) <= 1.0;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function merchantMatches(array $data): bool
+    {
+        $merchant = $this->sofizPay->merchantAccount();
+        $destination = $this->sofizPay->destination($data);
+
+        return $merchant !== '' && $destination !== null && hash_equals($merchant, $destination);
     }
 
     private function simulateCoins(PrintJob $job): void

@@ -6,7 +6,7 @@ import { copy, formatMoney } from '../../lib/printCopy';
 
 const LOCALE_KEY = 'metbati.print.locale';
 
-export default function Payment({ job, quote, methods }) {
+export default function Payment({ job, quote, methods, cardMinimum = 75 }) {
     const { flash } = usePage().props;
     const [locale, setLocale] = useState(() => sessionStorage.getItem(LOCALE_KEY) || job.locale || 'ar');
     const form = useForm({ payment_method: '' });
@@ -180,21 +180,22 @@ export default function Payment({ job, quote, methods }) {
                             {methods.map((method) => {
                                 const info = meta[method.id];
                                 const gold = info.tone === 'gold';
+                                const cardBlocked = method.id === 'algerie_poste' && Number(quote.amount) < Number(cardMinimum);
 
                                 return (
                                     <button
                                         key={method.id}
                                         type="button"
-                                        disabled={form.processing}
+                                        disabled={form.processing || cardBlocked}
                                         onClick={() => pay(method.id)}
-                                        className="flex w-full items-center gap-4 rounded-2xl border border-emerald-900/10 bg-white px-4 py-4 text-start transition active:scale-[0.99]"
+                                        className={`flex w-full items-center gap-4 rounded-2xl border border-emerald-900/10 bg-white px-4 py-4 text-start transition active:scale-[0.99] disabled:active:scale-100 ${cardBlocked ? 'opacity-45' : ''}`}
                                     >
                                         <span className={`flex h-[4.25rem] w-[4.25rem] shrink-0 items-center justify-center rounded-2xl ${gold ? 'bg-[#fff8db]' : 'bg-emerald-50'}`}>
                                             <img src={method.icon} alt="" className={`object-contain ${gold ? 'h-14 w-14' : 'h-11 w-11'}`} />
                                         </span>
                                         <span className="min-w-0 flex-1">
                                             <span className="block text-[1.05rem] font-extrabold leading-snug text-ink">{info.title}</span>
-                                            <span className="mt-1 block text-[13px] font-medium leading-snug text-slate">{info.hint}</span>
+                                            <span className="mt-1 block text-[13px] font-medium leading-snug text-slate">{cardBlocked ? t.payCardMinimum : info.hint}</span>
                                         </span>
                                         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#eef2f0] text-[15px] font-black text-slate">›</span>
                                     </button>
