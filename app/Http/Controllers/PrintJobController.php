@@ -90,6 +90,7 @@ class PrintJobController extends Controller
         $this->session->remember($job);
         $this->session->consumeDesk();
         $this->telegram->attach($job);
+        $this->telegram->filesChanged($job);
 
         return redirect()->route('print.review', $job);
     }

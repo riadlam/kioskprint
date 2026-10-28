@@ -7,6 +7,7 @@ use App\Models\PrintDocument;
 use App\Models\PrintJob;
 use App\Services\Print\PrintDocumentStore;
 use App\Services\Print\PrintJobSession;
+use App\Services\Telegram\OrderNotifier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -16,6 +17,7 @@ class PrintDocumentController extends Controller
     public function __construct(
         private PrintDocumentStore $documents,
         private PrintJobSession $session,
+        private OrderNotifier $telegram,
     ) {}
 
     public function store(StorePrintFilesRequest $request, PrintJob $job): RedirectResponse
@@ -23,6 +25,7 @@ class PrintDocumentController extends Controller
         $this->guard($job);
         $job->update(['locale' => $request->locale()]);
         $this->documents->add($job, $request->file('files', []), $request->locale());
+        $this->telegram->filesChanged($job);
 
         return redirect()->route('print.review', $job);
     }
@@ -32,6 +35,7 @@ class PrintDocumentController extends Controller
         $this->guard($job);
         abort_unless($document->print_job_id === $job->id, 404);
         $this->documents->removeDocument($document);
+        $this->telegram->filesChanged($job);
 
         return redirect()->route('print.review', $job);
     }

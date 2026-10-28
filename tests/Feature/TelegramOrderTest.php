@@ -67,16 +67,22 @@ class TelegramOrderTest extends TestCase
             ->map(fn (array $pair) => (string) ($pair[0]->data()['text'] ?? ''))
             ->all();
 
-        $this->assertSame('Status: pin_code', $texts[0]);
-        $this->assertStringContainsString('Status: pending_payment_1', $texts[1]);
-        $this->assertStringContainsString('Pages: 1', $texts[1]);
-        $this->assertStringContainsString('Amount: 20 DA', $texts[1]);
-        $this->assertStringContainsString('Status: pending_payment_2', $texts[2]);
-        $this->assertStringContainsString('Method: Monnayeur', $texts[2]);
-        $this->assertStringContainsString('Status: complete', $texts[3]);
-        $this->assertStringContainsString('Charged: 20 DA', $texts[3]);
-        $this->assertStringContainsString('Paid: 50 DA', $texts[3]);
-        $this->assertStringContainsString('Extra: 30 DA', $texts[3]);
+        $choice = $this->textWith($texts, 'Status: pending_payment_1');
+        $method = $this->textWith($texts, 'Status: pending_payment_2');
+        $done = $this->textWith($texts, 'Status: complete');
+
+        $this->assertStringContainsString('Status: pin_code', $texts[0]);
+        $this->assertStringContainsString('🔓', $texts[0]);
+        $this->assertStringContainsString('🆔 Job: '.$job->id, $choice);
+        $this->assertStringContainsString('📄 Pages: 1', $choice);
+        $this->assertStringContainsString('💵 Price: 20 DA / page', $choice);
+        $this->assertStringContainsString('💰 Total: 20 DA', $choice);
+        $this->assertStringContainsString('💳 Method: Monnayeur', $method);
+        $this->assertStringContainsString('🪙', $method);
+        $this->assertStringContainsString('🎉', $done);
+        $this->assertStringContainsString('💰 Total: 20 DA', $done);
+        $this->assertStringContainsString('💵 Paid: 50 DA', $done);
+        $this->assertStringContainsString('🎁 Extra: 30 DA', $done);
         $this->assertSame(42, $job->fresh()->telegram_message_id);
     }
 
@@ -106,5 +112,19 @@ class TelegramOrderTest extends TestCase
 
         $this->assertSame('55', PrintSetting::query()->value('telegram_chat_id'));
         Http::assertSentCount(1);
+    }
+
+    /**
+     * @param  list<string>  $texts
+     */
+    private function textWith(array $texts, string $needle): string
+    {
+        foreach ($texts as $text) {
+            if (str_contains($text, $needle)) {
+                return $text;
+            }
+        }
+
+        $this->fail('Missing Telegram text: '.$needle);
     }
 }

@@ -14,7 +14,15 @@ class OrderNotifier
 
     public function pinCode(): void
     {
-        $messageId = $this->send("Status: pin_code");
+        $kiosk = session('print_kiosk_id');
+        $kiosk = is_string($kiosk) && $kiosk !== '' ? $kiosk : '—';
+
+        $messageId = $this->send($this->card(
+            '🔓 Code accepted',
+            'pin_code',
+            'The desk code was right. A new order is about to start.',
+            ['🏪 Kiosk: '.$kiosk],
+        ));
 
         if ($messageId !== null) {
             session(['print_telegram_message_id' => $messageId]);
@@ -30,28 +38,44 @@ class OrderNotifier
         }
 
         $job->forceFill(['telegram_message_id' => (int) $messageId])->save();
+        $this->edit($job, $this->pinBody($job));
+    }
+
+    public function filesChanged(PrintJob $job): void
+    {
+        if ($job->status !== 'reviewing' || $job->payment_method) {
+            return;
+        }
+
+        $fresh = $job->fresh() ?? $job;
+        $this->edit($fresh, $this->pinBody($fresh));
     }
 
     public function pendingChoice(PrintJob $job): void
     {
-        $quote = $this->pricing->quote($job);
-
-        $this->edit($job, implode("\n", [
-            'Status: pending_payment_1',
-            'Pages: '.$quote['page_count'],
-            'Amount: '.$this->pricing->format($quote['amount']),
-        ]));
+        $this->edit($job, $this->card(
+            '🛒 Waiting for payment',
+            'pending_payment_1',
+            'Both ways to pay are on the phone. Waiting for a tap.',
+            $this->facts($job),
+        ));
     }
 
     public function pendingMethod(PrintJob $job): void
     {
-        $quote = $this->pricing->quote($job);
+        $card = $job->payment_method === 'algerie_poste';
 
-        $this->edit($job, implode("\n", [
-            'Status: pending_payment_2',
-            'Method: '.$this->methodName($job),
-            'Amount: '.$this->pricing->format($quote['amount']),
-        ]));
+        $this->edit($job, $this->card(
+            $card ? '💳 Paying by card' : '🪙 Paying with coins',
+            'pending_payment_2',
+            $card
+                ? 'They opened the card page. Waiting for the bank to say yes.'
+                : 'Coins are going in. Let’s see if they finish the amount.',
+            array_merge(
+                ['💳 Method: '.$this->methodName($job)],
+                $this->facts($job),
+            ),
+        ));
     }
 
     public function complete(PrintJob $job): void
@@ -60,18 +84,68 @@ class OrderNotifier
         $paid = round((float) $job->amount_inserted, 2);
         $extra = round(max(0, $paid - $charged), 2);
 
-        $this->edit($job, implode("\n", [
-            'Status: complete',
-            'Method: '.$this->methodName($job),
-            'Charged: '.$this->pricing->format($charged),
-            'Paid: '.$this->pricing->format($paid),
-            'Extra: '.$this->pricing->format($extra),
-        ]));
+        $this->edit($job, $this->card(
+            '🎉 Paid',
+            'complete',
+            'Money is in. The printer is on it.',
+            array_merge(
+                ['💳 Method: '.$this->methodName($job)],
+                $this->facts($job, $charged),
+                [
+                    '💵 Paid: '.$this->pricing->format($paid),
+                    '🎁 Extra: '.$this->pricing->format($extra),
+                ],
+            ),
+        ));
     }
 
     public function welcome(string $chatId): void
     {
-        $this->sendTo($chatId, 'Metbati orders will arrive in this chat.');
+        $this->sendTo($chatId, "👋 Metbati is connected.\nNew orders will update in this chat.");
+    }
+
+    private function pinBody(PrintJob $job): string
+    {
+        return $this->card(
+            '📄 Order opened',
+            'pin_code',
+            'They are choosing what to print.',
+            $this->facts($job),
+        );
+    }
+
+    /**
+     * @param  list<string>  $facts
+     */
+    private function card(string $title, string $status, string $blurb, array $facts): string
+    {
+        return implode("\n", [
+            $title,
+            'Status: '.$status,
+            '',
+            $blurb,
+            '',
+            ...$facts,
+        ]);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function facts(PrintJob $job, ?float $charged = null): array
+    {
+        $quote = $this->pricing->quote($job);
+        $total = $charged ?? $quote['amount'];
+
+        return [
+            '🆔 Job: '.$job->id,
+            '🏪 Kiosk: '.($job->kiosk_id ?: '—'),
+            '📄 Pages: '.$quote['page_count'],
+            '💵 Price: '.$quote['unit_formatted'].' / page',
+            '💰 Total: '.$this->pricing->format($total),
+            '🖨 Sides: '.($job->duplex ? 'both sides' : 'one side'),
+            '🌐 Language: '.($job->locale === 'fr' ? 'French' : 'Arabic'),
+        ];
     }
 
     private function methodName(PrintJob $job): string
