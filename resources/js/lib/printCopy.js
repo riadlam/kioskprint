@@ -94,6 +94,53 @@ export const copy = {
         payPosteLabel: 'بطاقة الذهبية',
         payPosteHint: 'ادفع إلكترونياً عبر بريد الجزائر أو بطاقة الذهبية.',
         payCardMinimum: 'الدفع بالبطاقة يبدأ من 75 دج',
+        payErrorOk: 'حسناً',
+        payError: {
+            canceled: {
+                title: 'تم إلغاء الدفع',
+                body: 'أُلغيت العملية قبل تأكيدها. لم تبدأ الطباعة. يمكنك المحاولة مرة أخرى أو الدفع نقداً.',
+            },
+            declined: {
+                title: 'رفض البنك العملية',
+                body: 'لم تقبل البطاقة هذا الدفع. تحقق من البطاقة أو اختر الدفع نقداً.',
+            },
+            insufficient: {
+                title: 'الرصيد غير كافٍ',
+                body: 'رصيد البطاقة لا يغطي هذا المبلغ. لم تبدأ الطباعة.',
+            },
+            expired: {
+                title: 'البطاقة منتهية الصلاحية',
+                body: 'تاريخ البطاقة غير صالح. استخدم بطاقة أخرى أو ادفع نقداً.',
+            },
+            pin: {
+                title: 'الرمز السري غير صحيح',
+                body: 'الرمز غير مقبول أو تجاوزت عدد المحاولات. لم تبدأ الطباعة.',
+            },
+            limit: {
+                title: 'تجاوز حد البطاقة',
+                body: 'المبلغ أعلى من الحد المسموح على البطاقة. جرّب طريقة أخرى أو ادفع نقداً.',
+            },
+            invalid_card: {
+                title: 'البطاقة غير صالحة',
+                body: 'رقم البطاقة غير مقبول. تحقق من الأرقام ثم أعد المحاولة.',
+            },
+            unavailable: {
+                title: 'الخدمة غير متاحة',
+                body: 'بنك البطاقة لا يجيب الآن. انتظر قليلاً ثم أعد المحاولة. لم تبدأ الطباعة.',
+            },
+            not_completed: {
+                title: 'لم يكتمل الدفع',
+                body: 'لم يصلنا تأكيد من البنك. إن لم تُكمل العملية فلن يُخصم المبلغ، ولن تبدأ الطباعة.',
+            },
+            unconfirmed: {
+                title: 'تعذر تأكيد الدفع',
+                body: 'لم نؤكد هذه العملية. لم تبدأ الطباعة. أعد المحاولة أو ادفع نقداً.',
+            },
+            minimum: {
+                title: 'المبلغ أقل من الحد',
+                body: 'الدفع بالبطاقة يبدأ من 75 دج. أضف صفحات أو ادفع نقداً.',
+            },
+        },
         paySelected: 'تم اختيار طريقة الدفع',
         payWaitingMonnayeur: 'بانتظار إدخال القطع المعدنية في آلة النقود…',
         payWaitingPoste: 'أكمل الدفع عبر بريد الجزائر…',
@@ -218,6 +265,53 @@ export const copy = {
         payPosteLabel: 'Carte Edahabia',
         payPosteHint: 'Payez en ligne via Algérie Poste ou votre carte Edahabia.',
         payCardMinimum: 'Le paiement par carte commence à 75 DA',
+        payErrorOk: 'D’accord',
+        payError: {
+            canceled: {
+                title: 'Paiement annulé',
+                body: 'L’opération a été annulée avant confirmation. L’impression n’a pas commencé. Vous pouvez réessayer ou payer en espèces.',
+            },
+            declined: {
+                title: 'Paiement refusé',
+                body: 'La banque n’a pas accepté cette carte. Vérifiez la carte ou payez en espèces.',
+            },
+            insufficient: {
+                title: 'Solde insuffisant',
+                body: 'Le solde de la carte ne couvre pas ce montant. L’impression n’a pas commencé.',
+            },
+            expired: {
+                title: 'Carte expirée',
+                body: 'La date de la carte n’est pas valable. Utilisez une autre carte ou payez en espèces.',
+            },
+            pin: {
+                title: 'Code secret incorrect',
+                body: 'Le code n’est pas accepté, ou le nombre d’essais est dépassé. L’impression n’a pas commencé.',
+            },
+            limit: {
+                title: 'Plafond de la carte dépassé',
+                body: 'Le montant dépasse la limite autorisée sur la carte. Choisissez un autre moyen ou payez en espèces.',
+            },
+            invalid_card: {
+                title: 'Carte invalide',
+                body: 'Le numéro de carte n’est pas accepté. Vérifiez les chiffres, puis réessayez.',
+            },
+            unavailable: {
+                title: 'Service indisponible',
+                body: 'La banque de la carte ne répond pas pour le moment. Patientez, puis réessayez. L’impression n’a pas commencé.',
+            },
+            not_completed: {
+                title: 'Paiement non terminé',
+                body: 'Aucune confirmation n’est arrivée de la banque. Si l’opération n’a pas été terminée, aucun montant n’est débité et l’impression ne commence pas.',
+            },
+            unconfirmed: {
+                title: 'Paiement non confirmé',
+                body: 'Cette opération n’a pas pu être confirmée. L’impression n’a pas commencé. Réessayez ou payez en espèces.',
+            },
+            minimum: {
+                title: 'Montant trop bas',
+                body: 'Le paiement par carte commence à 75 DA. Ajoutez des pages ou payez en espèces.',
+            },
+        },
         paySelected: 'Paiement sélectionné',
         payWaitingMonnayeur: 'En attente des pièces dans le monnayeur…',
         payWaitingPoste: 'Finalisez le paiement Algérie Poste…',

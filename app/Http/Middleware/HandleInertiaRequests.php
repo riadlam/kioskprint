@@ -41,6 +41,7 @@ class HandleInertiaRequests extends Middleware
             'printSessionMinutes' => (int) config('print.session_minutes', 10),
             'flash' => [
                 'payment_started' => $request->session()->get('payment_started'),
+                'payment_error' => $request->session()->get('payment_error'),
             ],
         ];
     }

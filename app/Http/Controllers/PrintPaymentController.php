@@ -340,12 +340,16 @@ class PrintPaymentController extends Controller
     {
         $job = $this->jobFromReturn($request);
 
-        if (! $job || ! is_string($job->cib_order_number) || $job->cib_order_number === '') {
-            return redirect()->route('print.create');
+        if (! $job) {
+            return redirect()->route('print.create')->with('payment_error', 'not_completed');
+        }
+
+        if (! is_string($job->cib_order_number) || $job->cib_order_number === '') {
+            return $this->failCard($job, 'not_completed');
         }
 
         if ($this->callbackSignatureRejected($request)) {
-            return redirect()->route('print.create');
+            return $this->failCard($job, 'unconfirmed');
         }
 
         if (in_array($job->status, ['paid', 'printing', 'printed'], true)) {
@@ -357,8 +361,16 @@ class PrintPaymentController extends Controller
         $check = $this->sofizPay->check($job->cib_order_number);
         $data = $check['data'];
 
-        if (! $check['success'] || ! $this->sofizPay->isPaid($data) || ! $this->amountMatches($job, $data) || ! $this->merchantMatches($data)) {
-            return redirect()->route('print.create');
+        if (! $check['success']) {
+            return $this->failCard($job, 'unavailable');
+        }
+
+        if ($this->sofizPay->isPaid($data) && (! $this->amountMatches($job, $data) || ! $this->merchantMatches($data))) {
+            return $this->failCard($job, 'unconfirmed');
+        }
+
+        if (! $this->sofizPay->isPaid($data)) {
+            return $this->failCard($job, $this->sofizPay->failureCode($data));
         }
 
         $paid = $this->sofizPay->paidAmount($data);
@@ -457,6 +469,35 @@ class PrintPaymentController extends Controller
         $this->telegram->pendingMethod($job->fresh());
 
         return redirect()->away($paymentUrl);
+    }
+
+    private function failCard(PrintJob $job, string $code): RedirectResponse
+    {
+        DB::transaction(function () use ($job) {
+            $locked = PrintJob::query()->whereKey($job->id)->lockForUpdate()->first();
+
+            if (! $locked || in_array($locked->status, ['paid', 'printing', 'printed'], true)) {
+                return;
+            }
+
+            if ((float) $locked->amount_inserted > 0) {
+                return;
+            }
+
+            $locked->update([
+                'status' => 'reviewing',
+                'payment_method' => null,
+            ]);
+        });
+
+        $job->refresh();
+        $this->session->resume($job);
+
+        if (in_array($job->status, ['paid', 'printing', 'printed'], true)) {
+            return redirect()->route('print.pay', $job);
+        }
+
+        return redirect()->route('print.pay', $job)->with('payment_error', $code);
     }
 
     private function jobFromReturn(Request $request): ?PrintJob

@@ -79,6 +79,49 @@ PEM;
     }
 
     /**
+     * A stable reason for a check that is not a confirmed payment.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function failureCode(array $data): string
+    {
+        $response = (string) ($data['respCode'] ?? '');
+        $orderStatus = $data['orderStatus'] ?? null;
+        $status = $orderStatus === null || $orderStatus === '' ? '' : (string) $orderStatus;
+
+        if ($response === '17' || $status === '3' || $status === '4') {
+            return 'canceled';
+        }
+
+        $byCode = match ($response) {
+            '51' => 'insufficient',
+            '33', '54' => 'expired',
+            '55', '75' => 'pin',
+            '61', '65' => 'limit',
+            '14' => 'invalid_card',
+            '91', '96' => 'unavailable',
+            '04', '05', '41', '43', '57', '62' => 'declined',
+            default => null,
+        };
+
+        if ($byCode !== null) {
+            return $byCode;
+        }
+
+        if ($status === '6' || ($response !== '' && $response !== '00')) {
+            return 'declined';
+        }
+
+        $error = $data['errorCode'] ?? null;
+
+        if ($error !== null && $error !== '' && $error !== 0 && $error !== '0') {
+            return 'declined';
+        }
+
+        return 'not_completed';
+    }
+
+    /**
      * @param  array<string, mixed>  $data
      */
     public function paidAmount(array $data): ?float

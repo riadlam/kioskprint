@@ -113,9 +113,15 @@ class SofizPayCheckoutTest extends TestCase
         ]);
 
         $this->get('/print/pay/satim/return?eid='.urlencode(Crypt::encryptString($job->id)))
-            ->assertRedirect(route('print.create'));
+            ->assertRedirect(route('print.pay', $job))
+            ->assertSessionHas('payment_error', 'unconfirmed');
 
-        $this->assertSame('awaiting_payment', $job->fresh()->status);
+        $this->assertSame('reviewing', $job->fresh()->status);
+
+        $job->update([
+            'status' => 'awaiting_payment',
+            'payment_method' => 'algerie_poste',
+        ]);
 
         Http::fake([
             'sofizpay.com/*' => Http::response([
@@ -128,9 +134,56 @@ class SofizPayCheckoutTest extends TestCase
         ]);
 
         $this->get('/print/pay/satim/return?eid='.urlencode(Crypt::encryptString($job->id)))
-            ->assertRedirect(route('print.create'));
+            ->assertRedirect(route('print.pay', $job))
+            ->assertSessionHas('payment_error', 'unconfirmed');
 
-        $this->assertSame('awaiting_payment', $job->fresh()->status);
+        $this->assertSame('reviewing', $job->fresh()->status);
+        $this->assertSame([], app(KioskPrinter::class)->units);
+    }
+
+    public function test_bank_failures_open_a_reason_on_the_payment_page(): void
+    {
+        Storage::fake('local');
+        config([
+            'print.emulate_poste_paid' => false,
+            'services.sofizpay.merchant_account' => 'MERCHANT',
+        ]);
+
+        $cases = [
+            [['respCode' => '17', 'errorCode' => 0, 'orderStatus' => 3], 'canceled'],
+            [['respCode' => '51', 'errorCode' => 5, 'orderStatus' => 6], 'insufficient'],
+            [['respCode' => '54', 'errorCode' => 5, 'orderStatus' => 6], 'expired'],
+            [['respCode' => '55', 'errorCode' => 5, 'orderStatus' => 6], 'pin'],
+            [['respCode' => '61', 'errorCode' => 5, 'orderStatus' => 6], 'limit'],
+            [['respCode' => '14', 'errorCode' => 5, 'orderStatus' => 6], 'invalid_card'],
+            [['respCode' => '91', 'errorCode' => 5, 'orderStatus' => 6], 'unavailable'],
+            [['respCode' => '05', 'errorCode' => 5, 'orderStatus' => 6], 'declined'],
+            [['respCode' => '00', 'errorCode' => 0, 'orderStatus' => 0], 'not_completed'],
+        ];
+
+        $job = $this->cardJob(80);
+        $payload = [];
+        Http::fake(function () use (&$payload) {
+            return Http::response($payload);
+        });
+
+        foreach ($cases as [$next, $reason]) {
+            $payload = $next;
+            $job->update([
+                'status' => 'awaiting_payment',
+                'payment_method' => 'algerie_poste',
+                'amount' => 80,
+                'amount_inserted' => 0,
+                'cib_order_number' => '2517039448',
+            ]);
+
+            $this->get('/print/pay/satim/return?eid='.urlencode(Crypt::encryptString($job->id)))
+                ->assertRedirect(route('print.pay', $job))
+                ->assertSessionHas('payment_error', $reason);
+
+            $this->assertSame('reviewing', $job->fresh()->status);
+        }
+
         $this->assertSame([], app(KioskPrinter::class)->units);
     }
 

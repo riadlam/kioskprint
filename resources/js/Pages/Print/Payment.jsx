@@ -1,5 +1,6 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
+import PayErrorDialog from '../../Components/Print/PayErrorDialog';
 import PhoneShell from '../../Components/Print/PhoneShell';
 import { kioskEcho } from '../../lib/kioskEcho';
 import { copy, formatMoney } from '../../lib/printCopy';
@@ -23,6 +24,9 @@ export default function Payment({ job, quote, methods, cardMinimum = 75 }) {
     const remaining = Math.max(0, Math.round((required - inserted) * 100) / 100);
     const progress = required > 0 ? Math.min(1, inserted / required) : 0;
     const printPercent = pageTotal > 0 ? Math.min(100, Math.round((pagesDone / pageTotal) * 100)) : 0;
+    const paymentError = flash?.payment_error
+        || (form.errors.payment_method === 'card_unavailable' ? 'unavailable' : '')
+        || (form.errors.payment_method === 'card_minimum' ? 'minimum' : '');
 
     useEffect(() => {
         if (!job.kiosk_id || (!monnayeurActive && !posteActive)) {
@@ -202,7 +206,7 @@ export default function Payment({ job, quote, methods, cardMinimum = 75 }) {
                                 );
                             })}
                         </div>
-                        {form.errors.payment_method && (
+                        {form.errors.payment_method && !paymentError && (
                             <p className="mt-3 text-[13px] font-semibold text-red-700">{form.errors.payment_method}</p>
                         )}
                     </section>
@@ -296,6 +300,7 @@ export default function Payment({ job, quote, methods, cardMinimum = 75 }) {
             {phase === 'done' && (
                 <PaidDialog title={t.paySuccessTitle} body={t.payDoneBody} amount={formatMoney(quote.amount, locale)} />
             )}
+            {phase !== 'done' && <PayErrorDialog code={paymentError} copy={t} />}
         </PhoneShell>
     );
 }

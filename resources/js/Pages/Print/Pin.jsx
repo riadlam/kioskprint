@@ -1,5 +1,6 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
+import PayErrorDialog from '../../Components/Print/PayErrorDialog';
 import PhoneShell from '../../Components/Print/PhoneShell';
 import { copy } from '../../lib/printCopy';
 
@@ -7,6 +8,7 @@ const LOCALE_KEY = 'metbati.print.locale';
 
 export default function Pin({ kioskId }) {
     const pageErrors = usePage().props.errors || {};
+    const paymentError = usePage().props.flash?.payment_error || '';
     const [locale, setLocale] = useState(() => sessionStorage.getItem(LOCALE_KEY) || 'ar');
     const form = useForm({ code: '', kiosk: kioskId });
     const t = copy[locale] || copy.ar;
@@ -40,6 +42,7 @@ export default function Pin({ kioskId }) {
     return (
         <PhoneShell locale={locale} onLocale={changeLocale} step={1}>
             <Head title={t.pinTitle} />
+            <PayErrorDialog code={paymentError} copy={t} />
             <div className="flex flex-1 flex-col bg-[#f4faf7] px-5 pb-8 pt-8">
                 <p className="text-center text-[1.45rem] font-black leading-tight text-ink">{t.pinTitle}</p>
                 <p className="mx-auto mt-3 max-w-xs text-center text-[14px] font-medium leading-6 text-slate">{t.pinHint}</p>
