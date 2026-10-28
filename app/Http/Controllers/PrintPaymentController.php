@@ -14,6 +14,7 @@ use App\Http\Requests\StorePrintFilesRequest;
 use App\Services\Print\PrintDocumentStore;
 use App\Services\Print\PrintJobSession;
 use App\Services\Print\PrintPricing;
+use App\Services\Telegram\OrderNotifier;
 use Throwable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -30,6 +31,7 @@ class PrintPaymentController extends Controller
         private PrintPricing $pricing,
         private PrintDocumentStore $documents,
         private CoinCreditService $credits,
+        private OrderNotifier $telegram,
     ) {}
 
     public function begin(Request $request, PrintJob $job): RedirectResponse
@@ -128,6 +130,10 @@ class PrintPaymentController extends Controller
 
         if ($quote['page_count'] < 1) {
             return redirect()->route('print.review', $job);
+        }
+
+        if ($job->status === 'reviewing' && ! $job->payment_method) {
+            $this->telegram->pendingChoice($job);
         }
 
         return Inertia::render('Print/Payment', [
@@ -264,6 +270,15 @@ class PrintPaymentController extends Controller
             $previous = PrintJob::query()->find($replacedId);
             if ($previous) {
                 $this->broadcastSafely(new PrintJobFailed($previous));
+            }
+        }
+
+        if ($result === 'awaiting' || $result === 'print') {
+            $job->refresh();
+            $this->telegram->pendingMethod($job);
+
+            if ($job->status === 'paid') {
+                $this->telegram->complete($job);
             }
         }
 

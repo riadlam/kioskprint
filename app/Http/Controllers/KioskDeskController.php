@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Events\KioskDeskRotated;
 use App\Services\Print\KioskDeskCodes;
 use App\Services\Print\PrintJobSession;
+use App\Services\Telegram\OrderNotifier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,6 +17,7 @@ class KioskDeskController extends Controller
     public function __construct(
         private KioskDeskCodes $codes,
         private PrintJobSession $session,
+        private OrderNotifier $telegram,
     ) {}
 
     public function publish(Request $request, string $kiosk): JsonResponse
@@ -56,6 +58,7 @@ class KioskDeskController extends Controller
         $debug = (string) config('print.debug_desk_code');
         if ($debug !== '' && strlen($debug) === strlen($data['code']) && hash_equals($debug, $data['code'])) {
             $this->session->grantDesk($kioskId);
+            $this->telegram->pinCode();
 
             return redirect()->route('print.create');
         }
@@ -78,6 +81,7 @@ class KioskDeskController extends Controller
 
         RateLimiter::clear($limit);
         $this->session->grantDesk($kioskId);
+        $this->telegram->pinCode();
         $this->broadcastRotated($kioskId);
 
         return redirect()->route('print.create');

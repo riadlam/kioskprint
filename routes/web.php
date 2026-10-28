@@ -18,6 +18,7 @@ use App\Http\Controllers\PrintJobController;
 use App\Http\Controllers\PrintPageController;
 use App\Http\Controllers\PrintPaymentController;
 use App\Http\Controllers\PrintTemplateController;
+use App\Http\Controllers\TelegramWebhookController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -51,6 +52,8 @@ Route::middleware('admin')->group(function () {
 Route::match(['GET', 'OPTIONS'], '/kiosk/templates', [KioskTemplateController::class, 'show'])->name('kiosk.templates');
 Route::match(['GET', 'OPTIONS'], '/kiosk/screen', [KioskScreenController::class, 'show'])->name('kiosk.screen');
 Route::match(['GET', 'OPTIONS'], '/kiosk/screen/videos/{video}', [KioskScreenController::class, 'video'])->name('kiosk.screen.video');
+
+Route::post('/telegram/webhook/{secret}', TelegramWebhookController::class)->name('telegram.webhook');
 
 Route::post('/kiosk/broadcasting/auth', KioskBroadcastController::class)->name('kiosk.broadcast');
 Route::post('/kiosk/{kiosk}/ready', [KioskPrintUnitController::class, 'ready'])->name('kiosk.ready');

@@ -29,6 +29,7 @@ class PrintJob extends Model
         'currency',
         'payment_method',
         'paid_at',
+        'telegram_message_id',
     ];
 
     protected function casts(): array

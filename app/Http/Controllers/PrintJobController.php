@@ -7,6 +7,7 @@ use App\Models\PrintJob;
 use App\Services\Print\PrintDocumentStore;
 use App\Services\Print\PrintJobSession;
 use App\Services\Print\PrintTemplateCatalog;
+use App\Services\Telegram\OrderNotifier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -19,6 +20,7 @@ class PrintJobController extends Controller
         private PrintDocumentStore $documents,
         private PrintJobSession $session,
         private PrintTemplateCatalog $templates,
+        private OrderNotifier $telegram,
     ) {}
 
     public function create(Request $request): RedirectResponse|Response
@@ -43,6 +45,8 @@ class PrintJobController extends Controller
                     $existing->update(['kiosk_id' => $this->session->kioskId()]);
                 }
 
+                $this->telegram->attach($existing);
+
                 return redirect()->route('print.review', $existing);
             }
         }
@@ -55,6 +59,7 @@ class PrintJobController extends Controller
 
         $this->session->remember($job);
         $this->session->consumeDesk();
+        $this->telegram->attach($job);
 
         return redirect()->route('print.review', $job);
     }
@@ -84,6 +89,7 @@ class PrintJobController extends Controller
 
         $this->session->remember($job);
         $this->session->consumeDesk();
+        $this->telegram->attach($job);
 
         return redirect()->route('print.review', $job);
     }

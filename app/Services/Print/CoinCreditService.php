@@ -7,6 +7,7 @@ use App\Events\PrintJobPaymentProgress;
 use App\Jobs\PrintKioskJob;
 use App\Models\CoinEvent;
 use App\Models\PrintJob;
+use App\Services\Telegram\OrderNotifier;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -160,6 +161,7 @@ class CoinCreditService
         }
 
         if ($outcome['kind'] === 'paid' && $job) {
+            app(OrderNotifier::class)->complete($job->fresh());
             $this->broadcastSafely(new PrintJobPaid($job));
             PrintKioskJob::dispatch($job->id);
         }
