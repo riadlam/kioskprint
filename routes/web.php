@@ -64,6 +64,7 @@ Route::post('/kiosk/{kiosk}/units/{unit}', [KioskPrintUnitController::class, 're
 
 Route::match(['GET', 'OPTIONS'], '/kiosk/{kiosk}/jobs/{job}', KioskPrintStatusController::class)
     ->name('kiosk.jobs.show');
+Route::get('/kiosk/{kiosk}/cash', [KioskCoinController::class, 'window'])->name('kiosk.cash.window');
 Route::post('/kiosk/{kiosk}/coins', KioskCoinController::class)
     ->name('kiosk.coins.store');
 Route::post('/kiosk/{kiosk}/desk', [KioskDeskController::class, 'publish'])->name('kiosk.desk.publish');

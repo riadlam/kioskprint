@@ -2,6 +2,7 @@
 
 namespace App\Services\Print;
 
+use App\Events\PrintJobCoinReturned;
 use App\Events\PrintJobFailed;
 use App\Events\PrintJobPaid;
 use App\Events\PrintJobPaymentProgress;
@@ -31,7 +32,46 @@ class CoinCreditService
      *
      * @return array<string, mixed>
      */
-    public function credit(string $kioskId, int $pulses, string $eventKey): array
+    public static function maxPulses(int $remaining): int
+    {
+        $max = 0;
+
+        foreach (self::DINARS as $pulses => $dinars) {
+            if ($dinars <= $remaining && $pulses > $max) {
+                $max = $pulses;
+            }
+        }
+
+        return $max;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function window(string $kioskId): array
+    {
+        $job = PrintJob::query()
+            ->where('kiosk_id', $kioskId)
+            ->where('status', 'awaiting_payment')
+            ->where('payment_method', 'monnayeur')
+            ->orderBy('created_at')
+            ->first();
+
+        if (! $job) {
+            return ['open' => false, 'max_pulses' => 0, 'remaining' => 0];
+        }
+
+        $remaining = max(0, $this->due($job) - $this->inserted($job));
+
+        return [
+            'open' => true,
+            'job_id' => $job->id,
+            'remaining' => $remaining,
+            'max_pulses' => self::maxPulses($remaining),
+        ];
+    }
+
+    public function credit(string $kioskId, int $pulses, string $eventKey, bool $returned = false): array
     {
         $dinars = self::DINARS[$pulses] ?? null;
 
@@ -39,7 +79,7 @@ class CoinCreditService
             return $this->emptyView('ignored');
         }
 
-        return $this->apply($kioskId, null, $pulses, $dinars, $eventKey);
+        return $this->apply($kioskId, null, $pulses, $dinars, $eventKey, $returned);
     }
 
     /**
@@ -87,10 +127,10 @@ class CoinCreditService
     /**
      * @return array<string, mixed>
      */
-    private function apply(string $kioskId, ?string $onlyJobId, int $pulses, int $dinars, string $eventKey): array
+    private function apply(string $kioskId, ?string $onlyJobId, int $pulses, int $dinars, string $eventKey, bool $returned = false): array
     {
         try {
-            $outcome = DB::transaction(function () use ($kioskId, $onlyJobId, $pulses, $dinars, $eventKey) {
+            $outcome = DB::transaction(function () use ($kioskId, $onlyJobId, $pulses, $dinars, $eventKey, $returned) {
                 $existing = CoinEvent::query()->where('event_key', $eventKey)->lockForUpdate()->first();
 
                 if ($existing) {
@@ -123,7 +163,22 @@ class CoinCreditService
                 }
 
                 $required = $this->due($job);
-                $inserted = $this->inserted($job) + $dinars;
+                $already = $this->inserted($job);
+                $remaining = max(0, $required - $already);
+
+                if ($returned && $dinars > $remaining) {
+                    CoinEvent::query()->create([
+                        'print_job_id' => $job->id,
+                        'kiosk_id' => $kioskId,
+                        'pulses' => $pulses,
+                        'dinars' => $dinars,
+                        'event_key' => $eventKey,
+                    ]);
+
+                    return ['kind' => 'returned', 'job_id' => $job->id, 'coin' => $dinars];
+                }
+
+                $inserted = $already + $dinars;
 
                 CoinEvent::query()->create([
                     'print_job_id' => $job->id,
@@ -158,6 +213,10 @@ class CoinCreditService
 
         $job = $outcome['job_id'] ? PrintJob::query()->find($outcome['job_id']) : null;
 
+        if ($outcome['kind'] === 'returned' && $job) {
+            $this->broadcastSafely(new PrintJobCoinReturned($job, (int) $outcome['coin']));
+        }
+
         if ($outcome['kind'] === 'credited' && $job) {
             $this->broadcastSafely(new PrintJobPaymentProgress($job));
             ExpireUnpaidPrint::dispatch($job->id)->delay(
@@ -171,7 +230,13 @@ class CoinCreditService
             PrintKioskJob::dispatch($job->id);
         }
 
-        return $this->view($job?->fresh(), $outcome['kind']);
+        $payload = $this->view($job?->fresh(), $outcome['kind']);
+
+        if ($outcome['kind'] === 'returned') {
+            $payload['coin'] = (int) $outcome['coin'];
+        }
+
+        return $payload;
     }
 
     private function broadcastSafely(object $event): void

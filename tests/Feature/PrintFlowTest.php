@@ -702,6 +702,51 @@ class PrintFlowTest extends TestCase
         ])->assertUnauthorized();
     }
 
+    public function test_a_coin_larger_than_the_amount_left_is_sent_back(): void
+    {
+        Storage::fake('local');
+        config([
+            'print.simulate_monnayeur' => false,
+            'print.kiosk_coin_token' => 'test-token',
+        ]);
+
+        $job = $this->openCashJob('kiosk-return', 50);
+
+        $this->withHeader('X-Kiosk-Token', 'test-token')
+            ->getJson('/kiosk/kiosk-return/cash')
+            ->assertOk()
+            ->assertJson([
+                'open' => true,
+                'remaining' => 50,
+                'max_pulses' => 4,
+            ]);
+
+        $this->coin('kiosk-return', 3, 'coin-return-20da')->assertJson([
+            'result' => 'credited',
+            'inserted' => 20,
+            'remaining' => 30,
+        ]);
+
+        $this->withHeader('X-Kiosk-Token', 'test-token')
+            ->postJson('/kiosk/kiosk-return/coins', [
+                'pulses' => 4,
+                'event_key' => 'coin-return-50da',
+                'returned' => true,
+            ])
+            ->assertOk()
+            ->assertJson([
+                'result' => 'returned',
+                'coin' => 50,
+                'inserted' => 20,
+                'remaining' => 30,
+            ]);
+
+        $job->refresh();
+        $this->assertSame('awaiting_payment', $job->status);
+        $this->assertSame(20, (int) round((float) $job->amount_inserted));
+        $this->assertSame([], $this->printer()->units);
+    }
+
     public function test_a_partial_coin_payment_closes_after_twenty_seconds(): void
     {
         Storage::fake('local');
