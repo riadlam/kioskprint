@@ -7,7 +7,7 @@ import { copy, formatMoney } from '../../lib/printCopy';
 
 const LOCALE_KEY = 'metbati.print.locale';
 
-export default function Payment({ job, quote, methods, cardMinimum = 75 }) {
+export default function Payment({ job, quote, methods, cardMinimum = 75, holdSeconds: holdLimit = 60 }) {
     const { flash } = usePage().props;
     const [locale, setLocale] = useState(() => sessionStorage.getItem(LOCALE_KEY) || job.locale || 'ar');
     const form = useForm({ payment_method: '' });
@@ -21,7 +21,8 @@ export default function Payment({ job, quote, methods, cardMinimum = 75 }) {
     const [pageTotal, setPageTotal] = useState(() => Number(quote.page_count || job.page_count || 0));
     const [onChooser, setOnChooser] = useState(false);
     const [paymentEnded, setPaymentEnded] = useState('');
-    const [holdSeconds, setHoldSeconds] = useState(20);
+    const holdCap = Math.max(5, Number(holdLimit) || 60);
+    const [holdSeconds, setHoldSeconds] = useState(holdCap);
     const [coinBack, setCoinBack] = useState(null);
     const required = Number(quote.amount || 0);
     const remaining = Math.max(0, Math.round((required - inserted) * 100) / 100);
@@ -137,13 +138,13 @@ export default function Payment({ job, quote, methods, cardMinimum = 75 }) {
             return undefined;
         }
 
-        setHoldSeconds(20);
+        setHoldSeconds(holdCap);
         const timer = setInterval(() => {
             setHoldSeconds((current) => (current <= 1 ? 0 : current - 1));
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [screen, inserted]);
+    }, [screen, inserted, holdCap]);
 
     useEffect(() => {
         if (!coinBack) {

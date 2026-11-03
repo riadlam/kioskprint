@@ -151,6 +151,7 @@ class PrintPaymentController extends Controller
                 'kiosk_id' => $job->kiosk_id,
             ],
             'quote' => $quote,
+            'holdSeconds' => max(5, (int) config('print.coin_hold_seconds', 60)),
             'cardMinimum' => $this->sofizPay->minAmount(),
             'methods' => [
                 [
@@ -329,7 +330,7 @@ class PrintPaymentController extends Controller
             $job->refresh();
             $this->broadcastSafely(new PrintJobAwaitingPayment($job));
             ExpireUnpaidPrint::dispatch($job->id)->delay(
-                now()->addSeconds(max(5, (int) config('print.coin_hold_seconds', 20)))
+                now()->addSeconds(max(5, (int) config('print.coin_hold_seconds', 60)))
             );
         }
 

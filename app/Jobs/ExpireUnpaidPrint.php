@@ -21,7 +21,7 @@ class ExpireUnpaidPrint implements ShouldQueue
             return;
         }
 
-        $seconds = max(5, (int) config('print.coin_hold_seconds', 20));
+        $seconds = max(5, (int) config('print.coin_hold_seconds', 60));
 
         if ($job->updated_at !== null && $job->updated_at->gt(now()->subSeconds($seconds))) {
             return;

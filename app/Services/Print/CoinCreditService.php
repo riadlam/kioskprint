@@ -220,7 +220,7 @@ class CoinCreditService
         if ($outcome['kind'] === 'credited' && $job) {
             $this->broadcastSafely(new PrintJobPaymentProgress($job));
             ExpireUnpaidPrint::dispatch($job->id)->delay(
-                now()->addSeconds(max(5, (int) config('print.coin_hold_seconds', 20)))
+                now()->addSeconds(max(5, (int) config('print.coin_hold_seconds', 60)))
             );
         }
 

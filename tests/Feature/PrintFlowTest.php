@@ -747,13 +747,13 @@ class PrintFlowTest extends TestCase
         $this->assertSame([], $this->printer()->units);
     }
 
-    public function test_a_partial_coin_payment_closes_after_twenty_seconds(): void
+    public function test_a_partial_coin_payment_closes_after_sixty_seconds(): void
     {
         Storage::fake('local');
         config([
             'print.simulate_monnayeur' => false,
             'print.kiosk_coin_token' => 'test-token',
-            'print.coin_hold_seconds' => 20,
+            'print.coin_hold_seconds' => 60,
         ]);
 
         $job = $this->openCashJob('kiosk-hold', 100);
@@ -763,11 +763,11 @@ class PrintFlowTest extends TestCase
             'remaining' => 80,
         ]);
 
-        $this->travel(10)->seconds();
+        $this->travel(30)->seconds();
         (new ExpireUnpaidPrint($job->id))->handle();
         $this->assertSame('awaiting_payment', $job->fresh()->status);
 
-        $this->travel(21)->seconds();
+        $this->travel(61)->seconds();
         (new ExpireUnpaidPrint($job->id))->handle();
 
         $job->refresh();
