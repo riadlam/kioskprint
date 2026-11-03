@@ -166,7 +166,9 @@ class CoinCreditService
                 $already = $this->inserted($job);
                 $remaining = max(0, $required - $already);
 
-                if ($returned && $dinars > $remaining) {
+                // Never credit a coin bigger than what is left, even if the
+                // acceptor failed to mark it as returned / send it to the chute.
+                if ($dinars > $remaining) {
                     CoinEvent::query()->create([
                         'print_job_id' => $job->id,
                         'kiosk_id' => $kioskId,

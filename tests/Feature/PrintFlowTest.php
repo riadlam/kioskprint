@@ -747,6 +747,39 @@ class PrintFlowTest extends TestCase
         $this->assertSame([], $this->printer()->units);
     }
 
+    public function test_an_oversize_coin_is_never_credited_even_without_returned_flag(): void
+    {
+        Storage::fake('local');
+        config([
+            'print.simulate_monnayeur' => false,
+            'print.kiosk_coin_token' => 'test-token',
+        ]);
+
+        $job = $this->openCashJob('kiosk-oversize', 20);
+
+        $this->withHeader('X-Kiosk-Token', 'test-token')
+            ->getJson('/kiosk/kiosk-oversize/cash')
+            ->assertOk()
+            ->assertJson([
+                'open' => true,
+                'remaining' => 20,
+                'max_pulses' => 3,
+            ]);
+
+        // Acceptor let a 50 DA coin through as a normal COIN (no returned=true).
+        $this->coin('kiosk-oversize', 4, 'coin-oversize-50da')->assertJson([
+            'result' => 'returned',
+            'coin' => 50,
+            'inserted' => 0,
+            'remaining' => 20,
+        ]);
+
+        $job->refresh();
+        $this->assertSame('awaiting_payment', $job->status);
+        $this->assertSame(0, (int) round((float) $job->amount_inserted));
+        $this->assertSame([], $this->printer()->units);
+    }
+
     public function test_a_partial_coin_payment_closes_after_sixty_seconds(): void
     {
         Storage::fake('local');
