@@ -5,6 +5,9 @@ namespace App\Services\Print;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use setasign\Fpdi\Fpdi;
+use setasign\Fpdi\PdfParser\CrossReference\CrossReferenceException;
+use setasign\Fpdi\PdfParser\Filter\FilterException;
+use setasign\Fpdi\PdfParser\PdfParserException;
 
 class PrintUnitComposer
 {
@@ -54,11 +57,13 @@ class PrintUnitComposer
         $pdf = new Fpdi;
         $pdf->SetAutoPageBreak(false);
 
+        $spoolDir = dirname($dest);
+
         foreach ($group as $page) {
             if ($this->isPdf($page)) {
-                $this->addPdfPage($pdf, $page['absolute_path'], (int) $page['number']);
+                $this->addPdfPage($pdf, $page, $spoolDir);
             } else {
-                $this->addImagePage($pdf, $page, dirname($dest));
+                $this->addImagePage($pdf, $page, $spoolDir);
             }
         }
 
@@ -74,13 +79,38 @@ class PrintUnitComposer
             || str_ends_with(strtolower($page['absolute_path']), '.pdf');
     }
 
-    private function addPdfPage(Fpdi $pdf, string $path, int $number): void
+    /**
+     * @param  array{id: int, absolute_path: string, mime: string, number: int}  $page
+     */
+    private function addPdfPage(Fpdi $pdf, array $page, string $spoolDir): void
     {
+        $number = (int) $page['number'];
         if ($number < 1) {
             throw new RuntimeException('Invalid PDF page number.');
         }
 
-        $count = $pdf->setSourceFile($path);
+        // Prefer a raster sheet: complex phone PDFs hang Sumatra/Canon when
+        // sent as vectors, and free FPDI cannot read many modern compressions.
+        $jpeg = $this->rasterizePdfPage($page['absolute_path'], $number, $spoolDir, (int) $page['id']);
+        if ($jpeg !== null) {
+            $this->addImagePage($pdf, [
+                'id' => (int) $page['id'],
+                'absolute_path' => $jpeg,
+                'mime' => 'image/jpeg',
+                'number' => 1,
+            ], $spoolDir);
+
+            return;
+        }
+
+        $source = $page['absolute_path'];
+
+        try {
+            $count = $pdf->setSourceFile($source);
+        } catch (CrossReferenceException|FilterException|PdfParserException $exception) {
+            $source = $this->flattenPdfForFpdi($page['absolute_path']);
+            $count = $pdf->setSourceFile($source);
+        }
 
         if ($number > $count) {
             throw new RuntimeException('A document page is outside the file.');
@@ -90,6 +120,109 @@ class PrintUnitComposer
         $size = $pdf->getTemplateSize($template);
         $pdf->AddPage($size['orientation'], [$size['width'], $size['height']]);
         $pdf->useTemplate($template);
+    }
+
+    private function rasterizePdfPage(string $path, int $number, string $spoolDir, int $pageId): ?string
+    {
+        $gs = $this->binary('gs');
+        if ($gs === null) {
+            return null;
+        }
+
+        $jpeg = $spoolDir.DIRECTORY_SEPARATOR.'pdf-'.$pageId.'-'.$number.'.jpg';
+        $cmd = sprintf(
+            '%s -dSAFER -dBATCH -dNOPAUSE -dQUIET -sDEVICE=jpeg -dJPEGQ=85 -r200 -dFirstPage=%d -dLastPage=%d -sOutputFile=%s %s',
+            escapeshellarg($gs),
+            $number,
+            $number,
+            escapeshellarg($jpeg),
+            escapeshellarg($path),
+        );
+        $output = [];
+        $code = 0;
+        exec($cmd.' 2>&1', $output, $code);
+
+        if ($code !== 0 || ! is_file($jpeg) || filesize($jpeg) < 64) {
+            @unlink($jpeg);
+
+            return null;
+        }
+
+        $image = @imagecreatefromjpeg($jpeg);
+        if ($image === false) {
+            @unlink($jpeg);
+
+            return null;
+        }
+
+        $fit = $this->fitForPrint($image);
+        imagejpeg($fit, $jpeg, 80);
+        imagedestroy($fit);
+
+        return $jpeg;
+    }
+
+    /**
+     * Rewrite a modern/compressed PDF into something the free FPDI parser accepts.
+     */
+    private function flattenPdfForFpdi(string $path): string
+    {
+        $out = $path.'.fpdi.pdf';
+
+        if (is_file($out) && filesize($out) > 64) {
+            return $out;
+        }
+
+        $qpdf = $this->binary('qpdf');
+        if ($qpdf !== null) {
+            $cmd = sprintf(
+                '%s --object-streams=disable --compress-streams=n --decode-level=generalized -- %s %s',
+                escapeshellarg($qpdf),
+                escapeshellarg($path),
+                escapeshellarg($out),
+            );
+            $this->runPdfTool($cmd, $out, 'qpdf');
+
+            return $out;
+        }
+
+        $gs = $this->binary('gs');
+        if ($gs !== null) {
+            $cmd = sprintf(
+                '%s -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dNOPAUSE -dQUIET -dBATCH -sOutputFile=%s %s',
+                escapeshellarg($gs),
+                escapeshellarg($out),
+                escapeshellarg($path),
+            );
+            $this->runPdfTool($cmd, $out, 'ghostscript');
+
+            return $out;
+        }
+
+        throw new RuntimeException(
+            'This PDF uses compression the printer stack cannot read, and no qpdf/ghostscript rewriter is installed.'
+        );
+    }
+
+    private function binary(string $name): ?string
+    {
+        $path = trim((string) shell_exec('command -v '.escapeshellarg($name).' 2>/dev/null'));
+
+        return $path !== '' && is_file($path) ? $path : null;
+    }
+
+    private function runPdfTool(string $command, string $out, string $tool): void
+    {
+        $output = [];
+        $code = 0;
+        exec($command.' 2>&1', $output, $code);
+
+        if ($code !== 0 || ! is_file($out) || filesize($out) < 64) {
+            @unlink($out);
+            throw new RuntimeException(
+                'Could not normalize PDF with '.$tool.': '.trim(implode("\n", $output))
+            );
+        }
     }
 
     /**
