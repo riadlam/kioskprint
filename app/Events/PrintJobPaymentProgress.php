@@ -27,19 +27,22 @@ class PrintJobPaymentProgress implements ShouldBroadcastNow
 
     public function broadcastWith(): array
     {
-        $required = (int) round((float) $this->job->amount);
-        $inserted = (int) round((float) $this->job->amount_inserted);
+        // Prefer fresh row so phone/tablet never paint a stale inserted amount.
+        $job = $this->job->fresh() ?? $this->job;
+        $required = (int) round((float) $job->amount);
+        $inserted = (int) round((float) $job->amount_inserted);
 
         return [
-            'job_id' => $this->job->id,
-            'kiosk_id' => $this->job->kiosk_id,
+            'job_id' => $job->id,
+            'kiosk_id' => $job->kiosk_id,
             'required' => $required,
             'inserted' => $inserted,
             'remaining' => max(0, $required - $inserted),
-            'payment_method' => $this->job->payment_method,
-            'status' => $this->job->status,
-            'page_count' => (int) $this->job->page_count,
+            'payment_method' => $job->payment_method,
+            'status' => $job->status,
+            'page_count' => (int) $job->page_count,
             'amount' => $required,
+            'at' => (int) floor(microtime(true) * 1000),
         ];
     }
 }

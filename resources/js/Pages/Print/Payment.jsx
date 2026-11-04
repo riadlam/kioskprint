@@ -32,6 +32,26 @@ export default function Payment({ job, quote, methods, cardMinimum = 75, holdSec
         || (form.errors.payment_method === 'card_unavailable' ? 'unavailable' : '')
         || (form.errors.payment_method === 'card_minimum' ? 'minimum' : '');
 
+    function applyCashSnapshot(data) {
+        if (!data || data.job_id && data.job_id !== job.id) {
+            return;
+        }
+        if (data.inserted !== undefined) {
+            setInserted((current) => Math.max(current, Number(data.inserted || 0)));
+        }
+        const status = String(data.status || '');
+        if (data.complete || status === 'paid' || status === 'printing' || status === 'printed') {
+            setInserted((current) => Math.max(current, required));
+            setPhase((current) => (current === 'done' || current === 'failed' ? current : status === 'printed' ? 'done' : 'printing'));
+        }
+        if (status === 'failed') {
+            setPaymentEnded('abandoned');
+            setPhase('failed');
+        }
+    }
+
+    // Websocket first for instant coin ticks; HTTP poll as a low-latency safety net
+    // so the phone never drifts from the tablet if Reverb hiccups.
     useEffect(() => {
         if (!job.kiosk_id || (!monnayeurActive && !posteActive)) {
             return undefined;
@@ -50,10 +70,10 @@ export default function Payment({ job, quote, methods, cardMinimum = 75, holdSec
         }
 
         channel.listen('.PrintJobPaymentProgress', (event) => {
-            if (!sameJob(event) || event.inserted === undefined) {
+            if (!sameJob(event)) {
                 return;
             }
-            setInserted((current) => Math.max(current, Number(event.inserted || 0)));
+            applyCashSnapshot(event);
         });
         channel.listen('.PrintJobPaid', (event) => {
             if (!sameJob(event)) {
@@ -107,6 +127,49 @@ export default function Payment({ job, quote, methods, cardMinimum = 75, holdSec
             echo.disconnect();
         };
     }, [monnayeurActive, posteActive, job.id, job.kiosk_id, required]);
+
+    useEffect(() => {
+        if (!monnayeurActive && !posteActive) {
+            return undefined;
+        }
+        if (phase === 'done' || phase === 'failed') {
+            return undefined;
+        }
+
+        let cancelled = false;
+        let timer = 0;
+
+        async function pull() {
+            try {
+                const response = await fetch(`/print/${job.id}/pay/status`, {
+                    headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin',
+                    cache: 'no-store',
+                });
+                if (!response.ok || cancelled) {
+                    return;
+                }
+                const data = await response.json();
+                if (cancelled) {
+                    return;
+                }
+                applyCashSnapshot(data);
+                if (data.current_page !== undefined) {
+                    setPagesDone((current) => Math.max(current, Number(data.current_page || 0)));
+                }
+            } catch (_) {
+                // keep trying; websocket may still be healthy
+            }
+        }
+
+        pull();
+        timer = window.setInterval(pull, 700);
+
+        return () => {
+            cancelled = true;
+            window.clearInterval(timer);
+        };
+    }, [monnayeurActive, posteActive, phase, job.id, required]);
 
     function changeLocale(next) {
         sessionStorage.setItem(LOCALE_KEY, next);
@@ -281,7 +344,7 @@ export default function Payment({ job, quote, methods, cardMinimum = 75, holdSec
                                     </div>
                                     <div className="h-2.5 overflow-hidden rounded-full bg-emerald-100">
                                         <div
-                                            className="h-full rounded-full bg-primary transition-all duration-500"
+                                            className="h-full rounded-full bg-primary transition-[width] duration-150 ease-out"
                                             style={{ width: `${Math.max(progress * 100, 4)}%` }}
                                         />
                                     </div>
