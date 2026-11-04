@@ -2,6 +2,7 @@
 
 namespace App\Services\Print;
 
+use App\Events\KioskCoinSeen;
 use App\Events\PrintJobCoinReturned;
 use App\Events\PrintJobFailed;
 use App\Events\PrintJobPaid;
@@ -12,6 +13,7 @@ use App\Models\CoinEvent;
 use App\Models\PrintJob;
 use App\Services\Telegram\OrderNotifier;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
@@ -45,17 +47,64 @@ class CoinCreditService
         return $max;
     }
 
+    public function startProbe(string $kioskId, int $minutes = 30): void
+    {
+        $minutes = max(5, min(120, $minutes));
+        $until = now()->addMinutes($minutes);
+
+        Cache::put($this->probeKey($kioskId), [
+            'until' => $until->getTimestamp(),
+        ], $until);
+    }
+
+    public function stopProbe(string $kioskId): void
+    {
+        Cache::forget($this->probeKey($kioskId));
+    }
+
+    public function isProbing(string $kioskId): bool
+    {
+        $row = Cache::get($this->probeKey($kioskId));
+
+        return is_array($row) && (int) ($row['until'] ?? 0) > now()->getTimestamp();
+    }
+
+    public function probeUntil(string $kioskId): ?string
+    {
+        $row = Cache::get($this->probeKey($kioskId));
+        $until = (int) (is_array($row) ? ($row['until'] ?? 0) : 0);
+
+        if ($until < now()->getTimestamp()) {
+            return null;
+        }
+
+        return now()->setTimestamp($until)->toIso8601String();
+    }
+
     /**
      * @return array<string, mixed>
      */
     public function window(string $kioskId): array
     {
+        $probing = $this->isProbing($kioskId);
+
         $job = PrintJob::query()
             ->where('kiosk_id', $kioskId)
             ->where('status', 'awaiting_payment')
             ->where('payment_method', 'monnayeur')
             ->orderBy('created_at')
             ->first();
+
+        if ($probing) {
+            // Open every mapped coin so wiring can be checked without a print job.
+            return [
+                'open' => true,
+                'probe' => true,
+                'job_id' => $job?->id,
+                'remaining' => $job ? max(0, $this->due($job) - $this->inserted($job)) : 200,
+                'max_pulses' => 6,
+            ];
+        }
 
         if (! $job) {
             return ['open' => false, 'max_pulses' => 0, 'remaining' => 0];
@@ -74,12 +123,34 @@ class CoinCreditService
     public function credit(string $kioskId, int $pulses, string $eventKey, bool $returned = false): array
     {
         $dinars = self::DINARS[$pulses] ?? null;
+        $acceptor = $returned ? 'back' : 'coin';
 
         if ($dinars === null) {
-            return $this->emptyView('ignored');
+            $payload = $this->emptyView('unknown');
+            $this->broadcastSeen($kioskId, $pulses, null, $acceptor, 'unknown', null, $eventKey);
+
+            return $payload;
         }
 
-        return $this->apply($kioskId, null, $pulses, $dinars, $eventKey, $returned);
+        $payload = $this->apply($kioskId, null, $pulses, $dinars, $eventKey, $returned);
+        $result = (string) ($payload['result'] ?? 'ignored');
+
+        if ($result === 'ignored' && $this->isProbing($kioskId)) {
+            $result = 'probe';
+            $payload['result'] = 'probe';
+        }
+
+        $this->broadcastSeen(
+            $kioskId,
+            $pulses,
+            $dinars,
+            $acceptor,
+            $result,
+            $payload['job_id'] ?? null,
+            $eventKey,
+        );
+
+        return $payload;
     }
 
     /**
@@ -248,6 +319,32 @@ class CoinCreditService
         } catch (Throwable $exception) {
             report($exception);
         }
+    }
+
+    private function broadcastSeen(
+        string $kioskId,
+        int $pulses,
+        ?int $dinars,
+        string $acceptor,
+        string $result,
+        ?string $jobId,
+        string $eventKey,
+    ): void {
+        $this->broadcastSafely(new KioskCoinSeen([
+            'kiosk_id' => $kioskId,
+            'pulses' => $pulses,
+            'dinars' => $dinars,
+            'acceptor' => $acceptor,
+            'result' => $result,
+            'job_id' => $jobId,
+            'event_key' => $eventKey,
+            'at' => now()->toIso8601String(),
+        ]));
+    }
+
+    private function probeKey(string $kioskId): string
+    {
+        return 'kiosk-coin-probe:'.$kioskId;
     }
 
     /**

@@ -3,6 +3,7 @@ import { Head, Link, router } from '@inertiajs/react';
 const LINKS = [
     { id: 'overview', href: '/admin', label: 'Overview' },
     { id: 'status', href: '/admin/status', label: 'Status' },
+    { id: 'coins', href: '/admin/coins', label: 'Coin probe' },
     { id: 'jobs', href: '/admin#jobs', label: 'Print jobs' },
     { id: 'screen', href: '/admin/screen', label: 'Screen' },
     { id: 'templates', href: '/admin/templates', label: 'Forms' },

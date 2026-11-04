@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminBroadcastController;
+use App\Http\Controllers\AdminCoinProbeController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AppDownloadController;
 use App\Http\Controllers\AdminScreenController;
@@ -37,6 +38,9 @@ Route::post('/admin/broadcasting/auth', AdminBroadcastController::class)->name('
 Route::middleware('admin')->group(function () {
     Route::post('/admin/print-settings', [AdminDashboardController::class, 'updatePrintSettings'])->name('admin.print-settings');
     Route::get('/admin/status', [AdminStatusController::class, 'show'])->name('admin.status');
+    Route::get('/admin/coins', [AdminCoinProbeController::class, 'show'])->name('admin.coins');
+    Route::post('/admin/coins/start', [AdminCoinProbeController::class, 'start'])->name('admin.coins.start');
+    Route::post('/admin/coins/stop', [AdminCoinProbeController::class, 'stop'])->name('admin.coins.stop');
     Route::get('/admin/screen', [AdminScreenController::class, 'show'])->name('admin.screen');
     Route::put('/admin/screen', [AdminScreenController::class, 'update'])->name('admin.screen.update');
     Route::post('/admin/screen/videos', [AdminScreenController::class, 'store'])->name('admin.screen.videos.store');

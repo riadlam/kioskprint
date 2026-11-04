@@ -503,7 +503,7 @@ class PrintFlowTest extends TestCase
         ]);
 
         $job = $this->openCashJob('kiosk-bad', 50);
-        $this->coin('kiosk-bad', 9, 'coin-bad-pulses')->assertOk()->assertJson(['result' => 'ignored']);
+        $this->coin('kiosk-bad', 9, 'coin-bad-pulses')->assertOk()->assertJson(['result' => 'unknown']);
 
         $job->refresh();
         $this->assertSame(0, (int) round((float) $job->amount_inserted));
