@@ -14,6 +14,7 @@ export default function Screen({ email, settings, videos = [] }) {
     const form = useForm({
         enabled: settings.enabled,
         idle_seconds: settings.idle_seconds,
+        muted: settings.muted ?? false,
     });
     const upload = useForm({ video: null });
 
@@ -49,6 +50,15 @@ export default function Screen({ email, settings, videos = [] }) {
                         />
                         Play ads on the tablet
                     </label>
+                    <label className="flex items-center gap-3 text-sm font-medium">
+                        <input
+                            type="checkbox"
+                            checked={form.data.muted}
+                            onChange={(event) => form.setData('muted', event.target.checked)}
+                            className="h-4 w-4 accent-primary"
+                        />
+                        Mute video audio
+                    </label>
                     <label className="block text-[13px] font-medium">
                         Wait on the home screen
                         <span className="mt-1.5 flex items-center gap-2">
@@ -76,6 +86,7 @@ export default function Screen({ email, settings, videos = [] }) {
                 )}
                 <p className="mt-4 text-[13px] leading-6 text-slate">
                     Each wait plays the next video once, then the tablet returns home. A coin or a print stops the video immediately.
+                    Mute only silences attract videos — instruction voices still play at full volume.
                 </p>
             </form>
 

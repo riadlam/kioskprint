@@ -16,7 +16,7 @@ class KioskScreenCatalog
     }
 
     /**
-     * @return array{enabled: bool, idle_seconds: int, videos: list<array{id: int, url: string, bytes: int, sha256: string}>}
+     * @return array{enabled: bool, idle_seconds: int, muted: bool, videos: list<array{id: int, url: string, bytes: int, sha256: string}>}
      */
     public function payload(): array
     {
@@ -39,6 +39,7 @@ class KioskScreenCatalog
         return [
             'enabled' => (bool) $settings->enabled,
             'idle_seconds' => (int) $settings->idle_seconds,
+            'muted' => (bool) $settings->muted,
             'videos' => $videos,
         ];
     }

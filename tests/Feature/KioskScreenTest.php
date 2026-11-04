@@ -21,6 +21,7 @@ class KioskScreenTest extends TestCase
             ->assertJson([
                 'enabled' => true,
                 'idle_seconds' => 60,
+                'muted' => false,
                 'videos' => [],
             ]);
 
@@ -40,6 +41,7 @@ class KioskScreenTest extends TestCase
             ->put('/admin/screen', [
                 'enabled' => true,
                 'idle_seconds' => 45,
+                'muted' => true,
             ])
             ->assertRedirect();
 
@@ -73,6 +75,7 @@ class KioskScreenTest extends TestCase
         $feed = $this->getJson('/kiosk/screen')->assertOk()->json();
         $this->assertTrue($feed['enabled']);
         $this->assertSame(45, $feed['idle_seconds']);
+        $this->assertTrue($feed['muted']);
         $this->assertCount(1, $feed['videos']);
         $this->assertSame('evening.mp4', KioskVideo::query()->find($feed['videos'][0]['id'])->original_name);
         $this->assertSame($videos->firstWhere('original_name', 'evening.mp4')->sha256, $feed['videos'][0]['sha256']);

@@ -25,6 +25,7 @@ class AdminScreenController extends Controller
             'settings' => [
                 'enabled' => (bool) $settings->enabled,
                 'idle_seconds' => (int) $settings->idle_seconds,
+                'muted' => (bool) $settings->muted,
             ],
             'videos' => $this->catalog->adminVideos(),
         ]);
@@ -35,11 +36,13 @@ class AdminScreenController extends Controller
         $data = $request->validate([
             'enabled' => ['required', 'boolean'],
             'idle_seconds' => ['required', 'integer', 'min:15', 'max:3600'],
+            'muted' => ['required', 'boolean'],
         ]);
 
         $this->catalog->settings()->update([
             'enabled' => $request->boolean('enabled'),
             'idle_seconds' => (int) $data['idle_seconds'],
+            'muted' => $request->boolean('muted'),
         ]);
         $this->catalog->ping();
 

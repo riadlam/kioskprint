@@ -9,6 +9,7 @@ class KioskScreenSetting extends Model
     protected $fillable = [
         'enabled',
         'idle_seconds',
+        'muted',
     ];
 
     protected function casts(): array
@@ -16,6 +17,7 @@ class KioskScreenSetting extends Model
         return [
             'enabled' => 'boolean',
             'idle_seconds' => 'integer',
+            'muted' => 'boolean',
         ];
     }
 
@@ -30,6 +32,7 @@ class KioskScreenSetting extends Model
         return static::query()->create([
             'enabled' => true,
             'idle_seconds' => 60,
+            'muted' => false,
         ]);
     }
 }
