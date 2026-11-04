@@ -172,7 +172,7 @@ export default function Payment({ job, quote, methods, cardMinimum = 75, holdSec
     };
 
     return (
-        <PhoneShell locale={locale} onLocale={changeLocale} step={2} dense>
+        <PhoneShell locale={locale} onLocale={changeLocale} step={2} dense busy={form.processing} busyLabel={t.navigating}>
             <Head title={t.payTitle} />
 
             <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-[#f4faf7]">

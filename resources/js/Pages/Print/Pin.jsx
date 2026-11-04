@@ -40,7 +40,7 @@ export default function Pin({ kioskId }) {
     const slots = [0, 1, 2].map((index) => form.data.code[index] || '');
 
     return (
-        <PhoneShell locale={locale} onLocale={changeLocale} step={1}>
+        <PhoneShell locale={locale} onLocale={changeLocale} step={1} busy={form.processing} busyLabel={t.navigating}>
             <Head title={t.pinTitle} />
             <PayErrorDialog code={paymentError} copy={t} />
             <div className="flex flex-1 flex-col bg-[#f4faf7] px-5 pb-8 pt-8">

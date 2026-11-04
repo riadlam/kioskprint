@@ -26,7 +26,6 @@ createInertiaApp({
     setup({ el, App, props }) {
         createRoot(el).render(<App {...props} />);
     },
-    progress: {
-        color: '#059669',
-    },
+    // Print flow uses a full-screen busy overlay instead of the top progress bar.
+    progress: false,
 });

@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
-import { usePage } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
+import { useEffect, useState } from 'react';
 import { copy } from '../../lib/printCopy';
+import PrintBusyOverlay from './PrintBusyOverlay';
 
 export default function PhoneShell({
     locale,
@@ -10,16 +11,40 @@ export default function PhoneShell({
     footer,
     dense = false,
     chrome = true,
+    busy = false,
+    busyLabel = null,
 }) {
     const t = copy[locale] || copy.ar;
+    const [inertiaBusy, setInertiaBusy] = useState(false);
     useOrderTimeout();
+
+    useEffect(() => {
+        const onStart = () => setInertiaBusy(true);
+        const onDone = () => setInertiaBusy(false);
+        const offStart = router.on('start', onStart);
+        const offFinish = router.on('finish', onDone);
+        const offCancel = router.on('cancel', onDone);
+        const offError = router.on('error', onDone);
+        return () => {
+            offStart();
+            offFinish();
+            offCancel();
+            offError();
+        };
+    }, []);
+
+    const locked = Boolean(busy || inertiaBusy);
+    const label = busyLabel || t.navigating || t.uploading;
 
     return (
         <div
             dir={locale === 'ar' ? 'rtl' : 'ltr'}
-            className={`print-studio text-ink ${dense ? 'h-dvh overflow-hidden' : 'min-h-dvh'}`}
+            className={`print-studio relative text-ink ${dense ? 'h-dvh overflow-hidden' : 'min-h-dvh'} ${locked ? 'select-none' : ''}`}
+            aria-busy={locked}
         >
-            <div className={`mx-auto flex w-full max-w-md flex-col ${dense ? 'h-full' : 'min-h-dvh'}`}>
+            <div
+                className={`mx-auto flex w-full max-w-md flex-col ${dense ? 'h-full' : 'min-h-dvh'} ${locked ? 'pointer-events-none' : ''}`}
+            >
                 {chrome ? (
                     <header className="relative z-20 flex shrink-0 items-center justify-between border-b border-emerald-900/10 bg-white/95 px-3 py-2 backdrop-blur-md pt-[max(0.5rem,env(safe-area-inset-top))]">
                         <div className="flex items-center gap-2.5">
@@ -38,6 +63,7 @@ export default function PhoneShell({
                 </main>
                 {footer ? <div className="shrink-0">{footer}</div> : null}
             </div>
+            {locked ? <PrintBusyOverlay label={label} /> : null}
         </div>
     );
 }

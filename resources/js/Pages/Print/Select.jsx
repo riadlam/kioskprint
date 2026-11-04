@@ -193,6 +193,8 @@ export default function Select({ limits }) {
             onLocale={changeLocale}
             step={1}
             dense
+            busy={form.processing || reading || scanBusy}
+            busyLabel={form.processing ? (form.progress ? `${t.uploading} ${form.progress.percentage}%` : t.uploading) : reading ? t.reading : t.navigating}
             footer={(
                 <div className="border-t border-emerald-900/10 bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
                     <div className="mb-2 flex items-center justify-between gap-3 text-[11px] font-medium text-slate">

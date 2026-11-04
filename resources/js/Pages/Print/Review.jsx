@@ -7,8 +7,8 @@ import PhoneShell from '../../Components/Print/PhoneShell';
 import TemplatePicker from '../../Components/Print/TemplatePicker';
 import { scanPages } from '../../lib/geniusScan';
 import { copy } from '../../lib/printCopy';
-import { clearDraft, mimeOf, pagesFromDraft, readDraft, saveDraft } from '../../lib/localPrintDraft';
-import { ACCEPT, countPdfPages, isAndroid, isPdfFile, isSupported, isTooBig, makeItemId, pickPrintFiles } from '../../lib/printFiles';
+import { clearDraft, pagesFromDraft, readDraft, saveDraft } from '../../lib/localPrintDraft';
+import { ACCEPT, isAndroid, isSupported, isTooBig, pickPrintFiles } from '../../lib/printFiles';
 
 const ACCESS_KEY = 'metbati.file-access';
 const LOCALE_KEY = 'metbati.print.locale';
@@ -143,37 +143,15 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
     }
 
     async function addAccepted(accepted) {
-        if (serverBacked) {
-            form.transform((data) => ({ ...data, locale, files: accepted }));
-            form.post(`/print/${job.id}/documents`, { forceFormData: true, preserveScroll: true });
-            return;
-        }
-
-        const draft = (await readDraft(job.id)) || { duplex: false, files: [], pages: [] };
-        const additions = [];
-        for (const file of accepted) {
-            let pageCount = 1;
-            if (isPdfFile(file)) {
-                try {
-                    pageCount = await countPdfPages(file);
-                } catch {
-                    pageCount = 1;
-                }
-            }
-            const key = makeItemId();
-            const type = mimeOf(file);
-            draft.files.push({ key, name: file.name, type, pages: pageCount, file });
-            for (let number = 1; number <= pageCount; number += 1) {
-                additions.push({ id: `${key}-${number}`, fileKey: key, number, copies: 1 });
-            }
-        }
-        draft.pages = [...draft.pages, ...additions];
-        draft.duplex = false;
-        await saveDraft(job.id, draft);
-        const next = pagesFromDraft(draft);
-        pagesRef.current = next;
-        setPages(next);
-        setFocus(additions[0]?.id || null);
+        // Upload immediately so "Payer" is a light checkout, not a bulk re-upload.
+        form.transform((data) => ({ ...data, locale, files: accepted }));
+        form.post(`/print/${job.id}/documents`, {
+            forceFormData: true,
+            preserveScroll: true,
+            onProgress: (progress) => setUploadPercent(progress?.percentage ?? null),
+            onSuccess: () => clearDraft(job.id),
+            onFinish: () => setUploadPercent(null),
+        });
     }
 
     function setCopies(pageId, copies) {
@@ -239,16 +217,18 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
     }
 
     function goToPay() {
-        if (pages.length < 1 || checkingOut) {
+        if (pages.length < 1 || checkingOut || form.processing) {
             return;
         }
 
         setCheckingOut(true);
-        if (serverBacked) {
+
+        // Preferred path: files already on the server → tiny checkout round-trip.
+        if (serverBacked || pagesRef.current.every((page) => Number.isInteger(Number(page.id)))) {
             router.post(
                 `/print/${job.id}/checkout`,
                 {
-                    page_ids: pagesRef.current.map((page) => page.id),
+                    page_ids: pagesRef.current.map((page) => Number(page.id)),
                     copies: pagesRef.current.map((page) => Number(page.copies) || 1),
                     duplex: false,
                 },
@@ -259,8 +239,8 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
             return;
         }
 
+        // Legacy local draft only (old sessions): one upload, then payment.
         const current = pagesRef.current;
-
         readDraft(job.id).then((draft) => {
             const byKey = new Map((draft?.files || []).map((file) => [file.key, file]));
             const uploadFiles = [];
@@ -324,12 +304,23 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
         }
     }
 
+    const screenBusy = checkingOut || form.processing || scanBusy || Boolean(templateBusy);
+    const busyLabel = scanBusy
+        ? t.scanPreparing
+        : (checkingOut || form.processing)
+            ? `${t.uploading}${uploadPercent != null ? ` ${uploadPercent}%` : ''}`
+            : templateBusy
+                ? t.uploading
+                : t.navigating;
+
     return (
         <PhoneShell
             locale={locale}
             onLocale={changeLocale}
             step={1}
             dense
+            busy={screenBusy}
+            busyLabel={busyLabel}
             footer={(
                 <div className="border-t border-emerald-900/10 bg-white px-3 py-2 pb-[max(0.55rem,env(safe-area-inset-bottom))]">
                     <div className="mb-1.5 flex items-center justify-between gap-2 text-[11px] font-medium text-slate">
@@ -337,7 +328,7 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
                         <button
                             type="button"
                             onClick={requestPick}
-                            disabled={form.processing || job.documents.length >= limits.max_files}
+                            disabled={screenBusy || job.documents.length >= limits.max_files}
                             className="font-semibold text-primary disabled:text-emerald-300"
                         >
                             + {t.addFiles}
@@ -348,7 +339,7 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
                         <button
                             type="button"
                             onClick={requestPick}
-                            disabled={form.processing || fileCount >= limits.max_files}
+                            disabled={screenBusy || fileCount >= limits.max_files}
                             className="flex h-14 items-center justify-center gap-2 rounded-xl border border-primary bg-emerald-50 px-2 text-[12px] font-extrabold leading-tight text-primary disabled:opacity-40"
                         >
                             <AddFileIcon />
@@ -357,7 +348,7 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
                         <button
                             type="button"
                             onClick={startScan}
-                            disabled={form.processing || fileCount >= limits.max_files || scanBusy}
+                            disabled={screenBusy || fileCount >= limits.max_files}
                             className="flex h-14 items-center justify-center gap-2 rounded-xl border border-primary bg-white px-2 text-[12px] font-extrabold leading-tight text-primary disabled:opacity-40"
                         >
                             <ScanIcon />
@@ -368,12 +359,12 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
                     <button
                         type="button"
                         onClick={goToPay}
-                        disabled={pages.length < 1 || checkingOut}
+                        disabled={pages.length < 1 || screenBusy}
                         className={`flex h-11 w-full items-center justify-center text-[13px] font-semibold text-white disabled:pointer-events-none ${
                             pages.length > 0 ? 'bg-primary' : 'bg-emerald-100 text-emerald-400'
                         }`}
                     >
-                        {checkingOut ? `${t.uploading}${uploadPercent != null ? ` ${uploadPercent}%` : ''}` : t.payCta}
+                        {t.payCta}
                     </button>
                 </div>
             )}
