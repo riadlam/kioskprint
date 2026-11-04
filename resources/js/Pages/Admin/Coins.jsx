@@ -1,5 +1,5 @@
 import { router } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import AdminShell from '../../Components/Admin/Shell';
 import { kioskEcho } from '../../lib/kioskEcho';
 
@@ -13,6 +13,19 @@ const RESULT = {
     replay: { label: 'Replay', className: 'bg-slate-100 text-slate-600' },
 };
 
+function fromRecent(row) {
+    return {
+        kiosk_id: null,
+        pulses: row.pulses,
+        dinars: row.dinars,
+        acceptor: 'coin',
+        result: row.job_id ? 'credited' : 'probe',
+        job_id: row.job_id,
+        event_key: row.event_key,
+        at: row.at,
+    };
+}
+
 export default function Coins({
     email = '',
     kiosk_id: kioskId = '',
@@ -21,8 +34,13 @@ export default function Coins({
     map = [],
     recent = [],
 }) {
-    const [live, setLive] = useState([]);
+    const seeded = useMemo(() => recent.map(fromRecent), [recent]);
+    const [live, setLive] = useState(seeded);
     const [connected, setConnected] = useState(false);
+
+    useEffect(() => {
+        setLive((current) => mergeRows(seeded, current));
+    }, [seeded]);
 
     useEffect(() => {
         const echo = kioskEcho();
@@ -32,15 +50,26 @@ export default function Coins({
 
         const channel = echo.channel(`kiosk.${kioskId}`);
         channel.listen('.KioskCoinSeen', (payload) => {
-            setLive((rows) => [payload, ...rows].slice(0, 80));
+            setLive((rows) => mergeRows([payload], rows));
         });
-        setConnected(true);
+        setConnected(Boolean(echo));
 
         return () => {
+            try {
+                echo.leave(`kiosk.${kioskId}`);
+            } catch (_) {}
             echo.disconnect();
             setConnected(false);
         };
     }, [kioskId]);
+
+    // Websocket can miss events; keep pulling DB rows while the page is open.
+    useEffect(() => {
+        const tick = window.setInterval(() => {
+            router.reload({ only: ['recent', 'probing', 'probe_until'], preserveScroll: true });
+        }, 2000);
+        return () => window.clearInterval(tick);
+    }, []);
 
     return (
         <AdminShell
@@ -56,7 +85,7 @@ export default function Coins({
                             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate">Kiosk</p>
                             <p className="mt-1 font-mono text-[14px] font-semibold">{kioskId}</p>
                             <p className="mt-2 text-[13px] text-slate">
-                                {connected ? 'Websocket live' : 'Websocket offline'}
+                                {connected ? 'Websocket subscribed' : 'Websocket offline · polling DB'}
                                 {probing && probeUntil ? ` · probe until ${formatTime(probeUntil)}` : ''}
                             </p>
                         </div>
@@ -87,7 +116,7 @@ export default function Coins({
                         }`}
                     >
                         {probing
-                            ? 'Acceptor is open for every coin (5–200 DA). Drop coins now — each one appears below live.'
+                            ? 'Acceptor is open for every coin (5–200 DA). Drop coins now — each one appears below within a couple seconds.'
                             : 'Acceptor is closed. Open it first or the ESP stays silent (MAX 0).'}
                     </div>
 
@@ -149,6 +178,21 @@ export default function Coins({
             </section>
         </AdminShell>
     );
+}
+
+function mergeRows(incoming, current) {
+    const bag = new Map();
+    [...incoming, ...current].forEach((row) => {
+        if (!row?.event_key) {
+            return;
+        }
+        if (!bag.has(row.event_key)) {
+            bag.set(row.event_key, row);
+        }
+    });
+    return Array.from(bag.values())
+        .sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')))
+        .slice(0, 80);
 }
 
 function LiveRow({ row }) {
