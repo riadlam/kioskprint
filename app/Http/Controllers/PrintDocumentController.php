@@ -25,7 +25,16 @@ class PrintDocumentController extends Controller
         $this->guard($job);
         $job->update(['locale' => $request->locale()]);
         $this->documents->add($job, $request->file('files', []), $request->locale());
-        $this->telegram->filesChanged($job);
+
+        // Do not block the phone upload on Telegram — that was adding seconds
+        // to every file add on step 2.
+        $jobId = $job->id;
+        dispatch(function () use ($jobId) {
+            $fresh = PrintJob::query()->find($jobId);
+            if ($fresh) {
+                app(OrderNotifier::class)->filesChanged($fresh);
+            }
+        })->afterResponse();
 
         return redirect()->route('print.review', $job);
     }

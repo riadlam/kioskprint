@@ -32,6 +32,61 @@ export function isTooBig(file) {
     return file.size > MAX_BYTES;
 }
 
+/**
+ * Shrink phone photos before upload. Full-res HEIC/JPG dumps were making
+ * step 2 hang for minutes; A4 print does not need 12MP originals.
+ */
+export async function preparePrintFiles(files) {
+    const out = [];
+    for (const file of files) {
+        out.push(await shrinkImageFile(file));
+    }
+    return out;
+}
+
+async function shrinkImageFile(file) {
+    if (!file.type.startsWith('image/') && !/\.(jpe?g|png|webp)$/i.test(file.name)) {
+        return file;
+    }
+
+    // Already small enough for a fast upload.
+    if (file.size <= 900 * 1024) {
+        return file;
+    }
+
+    try {
+        const bitmap = await createImageBitmap(file);
+        const maxEdge = 1600;
+        const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
+        const width = Math.max(1, Math.round(bitmap.width * scale));
+        const height = Math.max(1, Math.round(bitmap.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d', { alpha: false });
+        if (!ctx) {
+            bitmap.close();
+            return file;
+        }
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(bitmap, 0, 0, width, height);
+        bitmap.close();
+
+        const blob = await new Promise((resolve) => {
+            canvas.toBlob((next) => resolve(next), 'image/jpeg', 0.82);
+        });
+        if (!blob || blob.size < 32) {
+            return file;
+        }
+
+        const name = file.name.replace(/\.[^.]+$/i, '') + '.jpg';
+        return new File([blob], name, { type: 'image/jpeg', lastModified: Date.now() });
+    } catch {
+        return file;
+    }
+}
+
 export function formatSize(bytes) {
     if (bytes < 1024 * 1024) {
         return `${Math.max(1, Math.round(bytes / 1024))} KB`;

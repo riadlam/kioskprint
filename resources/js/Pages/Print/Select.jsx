@@ -15,6 +15,7 @@ import {
     isTooBig,
     makeItemId,
     pickPrintFiles,
+    preparePrintFiles,
 } from '../../lib/printFiles';
 
 const ACCESS_KEY = 'metbati.file-access';
@@ -149,12 +150,13 @@ export default function Select({ limits }) {
         });
     }
 
-    function submit() {
+    async function submit() {
         const files = selected.map((item) => item.file);
-        if (!files.length) {
+        if (!files.length || form.processing) {
             return;
         }
-        form.transform((data) => ({ ...data, locale, files }));
+        const ready = await preparePrintFiles(files);
+        form.transform((data) => ({ ...data, locale, files: ready }));
         form.post('/print', { forceFormData: true });
     }
 

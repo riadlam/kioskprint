@@ -1,6 +1,5 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
-import A4PagePreview from '../../Components/Print/A4PagePreview';
 import AccessSheet from '../../Components/Print/AccessSheet';
 import PageThumb from '../../Components/Print/PageThumb';
 import PhoneShell from '../../Components/Print/PhoneShell';
@@ -8,7 +7,7 @@ import TemplatePicker from '../../Components/Print/TemplatePicker';
 import { scanPages } from '../../lib/geniusScan';
 import { copy } from '../../lib/printCopy';
 import { clearDraft, pagesFromDraft, readDraft, saveDraft } from '../../lib/localPrintDraft';
-import { ACCEPT, isAndroid, isSupported, isTooBig, pickPrintFiles } from '../../lib/printFiles';
+import { ACCEPT, isAndroid, isSupported, isTooBig, pickPrintFiles, preparePrintFiles } from '../../lib/printFiles';
 
 const ACCESS_KEY = 'metbati.file-access';
 const LOCALE_KEY = 'metbati.print.locale';
@@ -143,14 +142,16 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
     }
 
     async function addAccepted(accepted) {
-        // Upload immediately so "Payer" is a light checkout, not a bulk re-upload.
-        form.transform((data) => ({ ...data, locale, files: accepted }));
+        // Shrink photos first, then upload so Pay stays a light checkout.
+        const ready = await preparePrintFiles(accepted);
+        form.transform((data) => ({ ...data, locale, files: ready }));
         form.post(`/print/${job.id}/documents`, {
             forceFormData: true,
             preserveScroll: true,
             onProgress: (progress) => setUploadPercent(progress?.percentage ?? null),
             onSuccess: () => clearDraft(job.id),
             onFinish: () => setUploadPercent(null),
+            onError: () => setNotice(t.uploadFailed || t.unsupported),
         });
     }
 
@@ -380,52 +381,26 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
                 tabIndex={-1}
             />
 
-            <section className="relative flex h-[34dvh] min-h-[200px] shrink-0 flex-col bg-primary">
-                <div className="pointer-events-none absolute inset-0 print-studio-grid opacity-40" />
-
-                <div className="relative z-10 flex items-center gap-2 px-3 py-1.5">
-                    <p className="min-w-0 flex-1 truncate text-[12px] font-semibold text-white">
-                        {active
-                            ? `${t.pageOf(active.number, active.document.page_count)} · A4${(Number(active.copies) || 1) > 1 ? ` ${t.copiesTimes(Number(active.copies) || 1)}` : ''}`
-                            : t.reviewTitle}
-                    </p>
-                    <span className="font-mono text-[12px] font-semibold text-white/90">{sheetCount}</span>
-                    {active && (
+            <section className="flex min-h-0 flex-1 flex-col bg-[#eef7f2]">
+                <div className="flex shrink-0 items-center justify-between gap-2 border-b border-emerald-900/10 bg-white px-3 py-2">
+                    <div className="min-w-0">
+                        <p className="truncate text-[12px] font-bold text-ink">{t.galleryTitle || t.reviewTitle}</p>
+                        <p className="truncate text-[10px] font-medium text-slate">
+                            {active
+                                ? `${t.pageOf(active.number, active.document.page_count)}${(Number(active.copies) || 1) > 1 ? ` · ${t.copiesTimes(Number(active.copies) || 1)}` : ''}`
+                                : t.pages(sheetCount)}
+                        </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                        <span className="font-mono text-[12px] font-bold text-primary">{sheetCount}</span>
                         <button
                             type="button"
-                            onClick={() => removePage(active.id)}
-                            className="border border-white/30 px-2 py-1 text-[10px] font-semibold text-white"
+                            onClick={() => setTemplatesOpen(true)}
+                            className="border border-primary/30 bg-emerald-50 px-2 py-1 text-[10px] font-bold text-primary"
                         >
-                            {t.remove}
+                            {t.templatesButton}
                         </button>
-                    )}
-                </div>
-
-                <div className="relative z-10 min-h-0 flex-1">
-                    {active ? (
-                        <A4PagePreview
-                            document={active.document}
-                            pageNumber={active.number}
-                            locale={locale}
-                        />
-                    ) : (
-                        <div className="absolute inset-2 flex items-center justify-center border border-dashed border-white/30 text-center">
-                            <p className="text-[12px] font-medium text-white">{t.emptyTitle}</p>
-                        </div>
-                    )}
-                </div>
-            </section>
-
-            <section className="flex min-h-0 flex-1 flex-col bg-[#eef7f2]">
-                <div className="flex shrink-0 items-center justify-between gap-2 border-b border-emerald-900/10 bg-white px-3 py-1.5">
-                    <p className="min-w-0 truncate text-[11px] font-semibold text-ink">{t.galleryTitle || t.reviewTitle}</p>
-                    <button
-                        type="button"
-                        onClick={() => setTemplatesOpen(true)}
-                        className="shrink-0 border border-primary/30 bg-emerald-50 px-2 py-1 text-[10px] font-bold text-primary"
-                    >
-                        {t.templatesButton}
-                    </button>
+                    </div>
                 </div>
 
                 {(notice || Object.values(form.errors).length > 0) && (
@@ -437,13 +412,13 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
                     </div>
                 )}
 
-                <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain p-1.5">
+                <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain p-2">
                     {pages.length === 0 ? (
                         <button
                             type="button"
                             onClick={requestPick}
                             disabled={form.processing}
-                            className="flex h-full min-h-[180px] w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-primary/40 bg-white/70 px-4 py-6 text-center transition active:scale-[0.99] disabled:opacity-60"
+                            className="flex h-full min-h-[220px] w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-primary/40 bg-white/70 px-4 py-6 text-center transition active:scale-[0.99] disabled:opacity-60"
                         >
                             <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-primary">
                                 <svg className="h-7 w-7" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -470,14 +445,14 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
                             </span>
                         </button>
                     ) : (
-                        <div className="grid grid-cols-4 gap-1">
+                        <div className="grid grid-cols-3 gap-2">
                             {pages.map((page) => {
                                 const isActive = active?.id === page.id;
 
                                 return (
                                     <div
                                         key={page.id}
-                                        className={`overflow-hidden bg-white ${
+                                        className={`overflow-hidden rounded-xl bg-white ${
                                             isActive
                                                 ? 'ring-2 ring-primary ring-offset-1 ring-offset-[#eef7f2]'
                                                 : 'border border-emerald-900/10'
@@ -494,7 +469,7 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
                                                     locale={locale}
                                                 />
                                             </div>
-                                            <span className="pointer-events-none absolute start-1 top-1 bg-primary px-1 py-0.5 font-mono text-[9px] font-semibold text-white">
+                                            <span className="pointer-events-none absolute start-1 top-1 rounded bg-primary px-1 py-0.5 font-mono text-[9px] font-semibold text-white">
                                                 {page.index}
                                             </span>
                                             <button
@@ -504,7 +479,7 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
                                                     event.stopPropagation();
                                                     removePage(page.id);
                                                 }}
-                                                className="absolute end-1 top-1 z-10 flex h-5 w-5 items-center justify-center bg-white/95 text-[12px] leading-none text-ink shadow"
+                                                className="absolute end-1 top-1 z-10 flex h-5 w-5 items-center justify-center rounded bg-white/95 text-[12px] leading-none text-ink shadow"
                                             >
                                                 ×
                                             </button>

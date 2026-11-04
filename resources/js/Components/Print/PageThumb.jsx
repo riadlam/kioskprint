@@ -44,7 +44,7 @@ export default function PageThumb({ document, pageNumber, locale, size = 'sm' })
                 if (cancelled || !canvasRef.current) {
                     return;
                 }
-                task = await renderPdfPageToCanvas(pdf, pageNumber, canvasRef.current, large ? 420 : 160);
+                task = await renderPdfPageToCanvas(pdf, pageNumber, canvasRef.current, large ? 420 : 120);
             } catch (error) {
                 if (!cancelled && error?.name !== 'RenderingCancelledException') {
                     setFailed(true);
@@ -68,7 +68,7 @@ export default function PageThumb({ document, pageNumber, locale, size = 'sm' })
             }
         >
             {isImage ? (
-                <img src={document.url} alt="" className="h-full w-full bg-white object-contain" />
+                <img src={document.url} alt="" loading="lazy" decoding="async" className="h-full w-full bg-white object-cover" />
             ) : failed ? (
                 <div className="flex h-full items-center justify-center bg-white px-2 text-center text-[10px] font-medium text-slate">
                     {t.fileFallback}
