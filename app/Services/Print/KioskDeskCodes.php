@@ -6,12 +6,17 @@ use Illuminate\Support\Facades\Cache;
 
 class KioskDeskCodes
 {
+    /** How long a published desk code stays valid on the server. */
+    public const TTL_MINUTES = 10;
+
     public function publish(string $kioskId, string $code): void
     {
+        // Keep the code longer than the tablet's refresh interval so a delayed
+        // Android timer / brief offline blip does not leave a dead code on screen.
         Cache::put($this->key($kioskId), [
             'code' => $code,
-            'expires_at' => now()->addMinutes(3)->getTimestamp(),
-        ], now()->addMinutes(3));
+            'expires_at' => now()->addMinutes(self::TTL_MINUTES)->getTimestamp(),
+        ], now()->addMinutes(self::TTL_MINUTES));
     }
 
     public function take(string $kioskId, string $code): bool
