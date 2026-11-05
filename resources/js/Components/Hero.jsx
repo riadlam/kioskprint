@@ -3,7 +3,7 @@ import AnimateIn from './AnimateIn';
 import { ArrowRight } from './Icons';
 import { useLandingLocale } from '../lib/LandingLocale';
 
-const kioskSrc = '/images/kiosk-real.jpg';
+const kioskSrc = '/images/kiosk-real.png';
 
 export default function Hero() {
     const { t, isAr } = useLandingLocale();

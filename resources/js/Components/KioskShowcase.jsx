@@ -3,7 +3,7 @@ import AnimateIn from './AnimateIn';
 import { ArrowRight, Check } from './Icons';
 import { useLandingLocale } from '../lib/LandingLocale';
 
-const kioskSrc = '/images/kiosk-real.jpg';
+const kioskSrc = '/images/kiosk-real.png';
 
 export default function KioskShowcase() {
     const { t, isAr } = useLandingLocale();
