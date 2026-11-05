@@ -21,6 +21,8 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
         <link rel="icon" href="/images/icon.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/images/icon.svg" />
+        <link rel="shortcut icon" href="/images/icon.svg" type="image/svg+xml" />
         <title inertia>{{ config('app.name', 'Metbati') }}</title>
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=cairo:400,500,600,700,800|plus-jakarta-sans:400,500,600,700,800" rel="stylesheet" />

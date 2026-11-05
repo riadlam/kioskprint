@@ -25,6 +25,11 @@ export default function Navbar() {
         return () => window.removeEventListener('scroll', onScroll);
     }, []);
 
+    useEffect(() => {
+        document.body.classList.toggle('menu-open', open);
+        return () => document.body.classList.remove('menu-open');
+    }, [open]);
+
     return (
         <>
             <motion.header
@@ -32,11 +37,11 @@ export default function Navbar() {
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
                 className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-                    scrolled ? 'bg-white/90 backdrop-blur-md shadow-sm border-b border-gray-200/60' : 'bg-transparent'
+                    scrolled || open ? 'bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-200/60' : 'bg-transparent'
                 }`}
             >
-                <nav className="section-padding flex items-center justify-between h-[72px]">
-                    <a href="#home" aria-label="Metbati home">
+                <nav className="section-padding flex items-center justify-between h-[64px] sm:h-[72px] gap-3">
+                    <a href="#home" aria-label={t.brand} className="min-w-0 shrink">
                         <Logo />
                     </a>
                     <div className="hidden lg:flex items-center gap-8">
@@ -71,19 +76,19 @@ export default function Navbar() {
                             {t.nav.printNow}
                         </a>
                     </div>
-                    <div className="flex items-center gap-2 lg:hidden">
+                    <div className="flex items-center gap-2 lg:hidden shrink-0">
                         <div className="flex items-center rounded-full border border-black/10 bg-white/80 p-0.5 text-sm font-semibold">
                             <button
                                 type="button"
                                 onClick={() => setLocale('ar')}
-                                className={`rounded-full px-2 py-1 ${locale === 'ar' ? 'bg-ink text-white' : 'text-slate'}`}
+                                className={`rounded-full px-2.5 py-1 ${locale === 'ar' ? 'bg-ink text-white' : 'text-slate'}`}
                             >
                                 ع
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setLocale('en')}
-                                className={`rounded-full px-2 py-1 ${locale === 'en' ? 'bg-ink text-white' : 'text-slate'}`}
+                                className={`rounded-full px-2.5 py-1 ${locale === 'en' ? 'bg-ink text-white' : 'text-slate'}`}
                             >
                                 EN
                             </button>
@@ -100,18 +105,22 @@ export default function Navbar() {
                 </nav>
             </motion.header>
             {open && (
-                <div className="fixed inset-0 z-40 lg:hidden bg-white pt-24 px-6 pb-8 flex flex-col gap-4">
+                <div className="fixed inset-0 z-40 lg:hidden bg-white pt-[72px] px-4 sm:px-6 pb-[max(2rem,env(safe-area-inset-bottom))] flex flex-col gap-1 overflow-y-auto">
                     {links.map((link) => (
                         <a
                             key={link.href}
                             href={link.href}
-                            className="text-xl font-semibold text-ink py-2 border-b border-gray-100"
+                            className="text-xl font-semibold text-ink py-3 border-b border-gray-100"
                             onClick={() => setOpen(false)}
                         >
                             {link.label}
                         </a>
                     ))}
-                    <a href="#print" className="btn-primary mt-4 justify-center" onClick={() => setOpen(false)}>
+                    <a
+                        href="#print"
+                        className="btn-primary mt-6 justify-center w-full"
+                        onClick={() => setOpen(false)}
+                    >
                         {t.nav.printNow} <ArrowRight className={isAr ? 'rotate-180' : ''} />
                     </a>
                 </div>

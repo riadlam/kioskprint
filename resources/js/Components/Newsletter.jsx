@@ -49,21 +49,21 @@ export default function Newsletter() {
                                     {t.newsletter.title}
                                 </h2>
                                 <p className="text-slate text-lg mb-8">{t.newsletter.body}</p>
-                                <form className="relative max-w-md mx-auto md:mx-0" onSubmit={onSubmit}>
+                                <form className="flex flex-col sm:relative gap-3 sm:block max-w-md mx-auto md:mx-0" onSubmit={onSubmit}>
                                     <input
                                         type="email"
                                         required
                                         placeholder={t.newsletter.placeholder}
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
-                                        className={`w-full py-4 rounded-xl border border-gray-200 shadow-sm bg-white text-base md:text-lg text-ink placeholder:text-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 ${
-                                            isAr ? 'pr-6 pl-[140px]' : 'pl-6 pr-[140px]'
+                                        className={`w-full py-4 rounded-xl border border-gray-200 shadow-sm bg-white text-base md:text-lg text-ink placeholder:text-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 px-5 sm:px-6 ${
+                                            isAr ? 'sm:pl-[140px] sm:pr-6' : 'sm:pr-[140px] sm:pl-6'
                                         }`}
                                     />
                                     <button
                                         type="submit"
-                                        className={`absolute top-2 bottom-2 px-6 rounded-lg bg-primary text-white text-base font-semibold hover:opacity-90 transition-colors shadow-sm ${
-                                            isAr ? 'left-2' : 'right-2'
+                                        className={`sm:absolute sm:top-2 sm:bottom-2 px-6 py-3.5 sm:py-0 rounded-lg bg-primary text-white text-base font-semibold hover:opacity-90 transition-colors shadow-sm w-full sm:w-auto ${
+                                            isAr ? 'sm:left-2' : 'sm:right-2'
                                         }`}
                                     >
                                         {sent ? t.newsletter.thanks : t.newsletter.subscribe}

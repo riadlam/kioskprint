@@ -66,7 +66,7 @@ export default function Footer() {
                 </div>
                 <div className="mt-16 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4">
                     <p className="text-base text-white/40">
-                        © {new Date().getFullYear()} Metbati. {t.footer.rights}
+                        © {new Date().getFullYear()} {t.brand}. {t.footer.rights}
                     </p>
                     <p className="text-base text-white/40">{t.footer.made}</p>
                 </div>

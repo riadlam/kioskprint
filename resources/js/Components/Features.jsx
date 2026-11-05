@@ -17,8 +17,8 @@ export default function Features() {
     return (
         <section id="about" className="section-padding section-y bg-[#F8F9FA]">
             <AnimateIn>
-                <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-12">
-                    <div>
+                <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8 sm:mb-12">
+                    <div className="min-w-0">
                         <p className="eyebrow mb-3 uppercase tracking-widest font-semibold text-slate">
                             {t.features.eyebrow}
                         </p>
@@ -28,7 +28,7 @@ export default function Features() {
                             <span className="text-primary">{t.features.titleAccent}</span>
                         </h2>
                     </div>
-                    <a className="btn-text shrink-0" href="#how-it-works">
+                    <a className="btn-text shrink-0 self-start md:self-auto" href="#how-it-works">
                         {t.features.explore} <ArrowRight size={16} className={isAr ? 'rotate-180' : ''} />
                     </a>
                 </div>

@@ -1,10 +1,13 @@
 export const LANDING_LOCALE_KEY = 'metbati.landing.locale';
+export const BRAND_AR = 'مطبعتـي';
+export const BRAND_EN = 'METBATI';
 
 export const landingCopy = {
     ar: {
-        metaTitle: 'متبّتي: شبكة الطباعة الذكية في الجزائر',
+        brand: BRAND_AR,
+        metaTitle: 'مطبعتـي: شبكة الطباعة الذكية في الجزائر',
         metaDescription:
-            'اقترب، امسح، اطبع، واستلم. متبّتي توفّر طباعة ذاتية الخدمة على مدار الساعة في الجامعات والمطارات والأماكن العامة عبر الجزائر.',
+            'اقترب، امسح، اطبع، واستلم. مطبعتـي توفّر طباعة ذاتية الخدمة على مدار الساعة في الجامعات والمطارات والأماكن العامة عبر الجزائر.',
         nav: {
             home: 'الرئيسية',
             about: 'من نحن',
@@ -27,7 +30,7 @@ export const landingCopy = {
             badgeAccessSub: 'دائمًا جاهز',
             badgeSpeed: '<60 ث',
             badgeSpeedSub: 'من الطباعة إلى الاستلام',
-            kioskAlt: 'كشك متبّتي الذكي للطباعة الذاتية',
+            kioskAlt: 'كشك مطبعتـي الذكي للطباعة الذاتية',
         },
         locations: {
             eyebrow: 'مُصمَّم لجامعات الجزائر والمكاتب والأماكن العامة',
@@ -72,14 +75,14 @@ export const landingCopy = {
             cta: 'اعثر على كشك قريب منك',
             steps: [
                 { num: '01', title: 'ارفع المستند', text: 'ارفع ملفك في ثوانٍ من أي جهاز.' },
-                { num: '02', title: 'اختر الكشك', text: 'حدّد أقرب كشك متبّتي إليك.' },
+                { num: '02', title: 'اختر الكشك', text: 'حدّد أقرب كشك مطبعتـي إليك.' },
                 { num: '03', title: 'ادفع', text: 'ادفع بأمان عبر البطاقة أو المحافظ الرقمية.' },
                 { num: '04', title: 'استلم الطباعة', text: 'استلم طباعتك عالية الجودة فورًا.' },
             ],
         },
         showcase: {
             eyebrow: 'طباعة ذكية بتصميم جديد',
-            title: 'أكشاك متبّتي الذكية',
+            title: 'أكشاك مطبعتـي الذكية',
             body: 'أكشاكنا مبنية للسرعة والأمان والموثوقية، ومصممة للأماكن ذات الحركة العالية لتعمل دون مراقبة على مدار الساعة.',
             cta: 'استكشف الأكشاك',
             bullets: [
@@ -88,13 +91,13 @@ export const landingCopy = {
                 'طابعة صناعية عالية السرعة',
                 'تصميم آمن ومغلق',
             ],
-            alt: 'كشك متبّتي الذكي للطباعة — منظر جانبي',
+            alt: 'كشك مطبعتـي الذكي للطباعة — منظر جانبي',
         },
         stats: {
             eyebrow: 'مبني للجزائر',
             title: 'نجعل الطباعة بسيطة لـ',
             titleAccent: 'الجميع، في كل مكان.',
-            body: 'سريعة وآمنة ودائمًا متاحة — أكشاك متبّتي تجعل الطباعة عالية الجودة في متناول الجميع في الجامعات والمكاتب والأماكن العامة.',
+            body: 'سريعة وآمنة ودائمًا متاحة — أكشاك مطبعتـي تجعل الطباعة عالية الجودة في متناول الجميع في الجامعات والمكاتب والأماكن العامة.',
             items: [
                 { value: '24/7', label: 'متاح دائمًا', sub: 'كل كشك، كل يوم' },
                 { value: '<60 ث', label: 'من الطباعة إلى الاستلام', sub: 'من المسح حتى التسليم' },
@@ -103,19 +106,19 @@ export const landingCopy = {
             ],
         },
         vision: {
-            title: 'انطلقنا من الجزائر العاصمة. وبُنينا من أجل الجزائر.',
-            body: 'أكشاك متبّتي تعمل اليوم في الجزائر العاصمة، على منصة جاهزة للتوسّع إلى أكثر من 1000 كشك عبر الجزائر بحلول 2030.',
+            title: 'انطلقنا من بسكرة. وبُنينا من أجل الجزائر.',
+            body: 'أكشاك مطبعتـي تعمل اليوم في بسكرة، على منصة جاهزة للتوسّع إلى أكثر من 1000 كشك عبر الجزائر بحلول 2030.',
             cta: 'عرض كل المواقع',
             caption: 'رؤيتنا لعام 2030 (وليست التغطية الحالية)',
-            alt: 'رسم يوضح رؤية متبّتي 2030 لشبكة أكشاك وطنية',
+            alt: 'رسم يوضح رؤية مطبعتـي 2030 لشبكة أكشاك وطنية',
             metrics: [
-                { title: 'الجزائر', sub: 'مباشر اليوم' },
+                { title: 'بسكرة', sub: 'مباشر اليوم' },
                 { title: '2030', sub: 'هدف التوسّع' },
                 { title: '+1,000', sub: 'رؤية الأكشاك' },
             ],
         },
         newsletter: {
-            title: 'ابقَ على اطلاع مع متبّتي',
+            title: 'ابقَ على اطلاع مع مطبعتـي',
             body: 'احصل على آخر التحديثات والمزايا الجديدة والعروض مباشرة في بريدك.',
             placeholder: 'أدخل بريدك الإلكتروني',
             subscribe: 'اشترك',
@@ -128,7 +131,7 @@ export const landingCopy = {
             solutions: 'الحلول',
             resources: 'الموارد',
             help: 'تحتاج مساعدة؟',
-            city: 'الجزائر العاصمة، الجزائر',
+            city: 'بسكرة، الجزائر',
             find: 'اعثر على كشك',
             rights: 'جميع الحقوق محفوظة.',
             made: 'صُنع بعناية في الجزائر',
@@ -154,6 +157,7 @@ export const landingCopy = {
         lang: { ar: 'عربي', en: 'EN' },
     },
     en: {
+        brand: 'Metbati',
         metaTitle: "Metbati: Algeria's Smart Printing Kiosk",
         metaDescription:
             'Walk up, scan, print, collect. Metbati brings 24/7 self-service printing to campuses, airports, and public spaces across Algeria.',
@@ -255,13 +259,13 @@ export const landingCopy = {
             ],
         },
         vision: {
-            title: 'Starting in Algiers. Built for Algeria.',
-            body: 'Metbati kiosks are live in Algiers today, with a platform built to scale to 1,000+ kiosks across Algeria by 2030.',
+            title: 'Starting in Biskra. Built for Algeria.',
+            body: 'Metbati kiosks are live in Biskra today, with a platform built to scale to 1,000+ kiosks across Algeria by 2030.',
             cta: 'View All Locations',
             caption: 'Our 2030 vision (not current coverage)',
             alt: "Illustration of Metbati's 2030 vision for a nationwide kiosk network",
             metrics: [
-                { title: 'Algiers', sub: 'Live Today' },
+                { title: 'Biskra', sub: 'Live Today' },
                 { title: '2030', sub: 'Expansion Target' },
                 { title: '1,000+', sub: 'Kiosk Vision' },
             ],
@@ -280,7 +284,7 @@ export const landingCopy = {
             solutions: 'Solutions',
             resources: 'Resources',
             help: 'Need help?',
-            city: 'Algiers, Algeria',
+            city: 'Biskra, Algeria',
             find: 'Find a Kiosk',
             rights: 'All rights reserved.',
             made: 'Made with care in Algeria',

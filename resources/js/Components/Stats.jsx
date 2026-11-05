@@ -95,10 +95,10 @@ export default function Stats() {
                         <p className="text-sm md:text-base font-semibold uppercase tracking-[0.2em] text-primary mb-4">
                             {t.stats.eyebrow}
                         </p>
-                        <h2 className="font-extrabold text-4xl md:text-5xl lg:text-6xl text-white leading-tight tracking-tight">
+                        <h2 className="font-extrabold text-[1.85rem] sm:text-4xl md:text-5xl lg:text-6xl text-white leading-tight tracking-tight px-1">
                             {t.stats.title} <span className="text-primary">{t.stats.titleAccent}</span>
                         </h2>
-                        <p className="mt-5 text-lg md:text-xl text-white/55 max-w-2xl mx-auto leading-relaxed">
+                        <p className="mt-5 text-base sm:text-lg md:text-xl text-white/55 max-w-2xl mx-auto leading-relaxed px-1">
                             {t.stats.body}
                         </p>
                     </div>

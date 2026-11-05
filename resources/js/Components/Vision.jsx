@@ -17,12 +17,12 @@ export default function Vision() {
                 <AnimateIn direction="left">
                     <h2 className="heading-section mb-4">{t.vision.title}</h2>
                     <p className="text-body mb-10 max-w-md">{t.vision.body}</p>
-                    <div className="grid grid-cols-3 gap-6 mb-10 max-w-md">
+                    <div className="grid grid-cols-3 gap-3 sm:gap-6 mb-10 max-w-md">
                         {t.vision.metrics.map((m, i) => (
-                            <div key={m.sub}>
+                            <div key={m.sub} className="min-w-0">
                                 <MaskIcon src={metricIcons[i]} size={28} className="mb-3" />
-                                <p className="font-extrabold text-h3 text-ink">{m.title}</p>
-                                <p className="text-small text-slate mt-1">{m.sub}</p>
+                                <p className="font-extrabold text-xl sm:text-h3 text-ink break-words">{m.title}</p>
+                                <p className="text-sm sm:text-small text-slate mt-1">{m.sub}</p>
                             </div>
                         ))}
                     </div>

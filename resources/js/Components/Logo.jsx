@@ -1,3 +1,6 @@
+import { useLandingLocale } from '../lib/LandingLocale';
+import { BRAND_AR } from '../lib/landingCopy';
+
 export function KioskMark({ size = 32, light = false }) {
     const stroke = light ? '#F8F9FA' : '#0D0F14';
     const fillDark = light ? '#0D0F14' : '#F8F9FA';
@@ -9,6 +12,7 @@ export function KioskMark({ size = 32, light = false }) {
             width={size}
             height={size * (124 / 132)}
             viewBox="0 0 132 124"
+            className="shrink-0"
             style={{ overflow: 'visible', display: 'block' }}
             aria-hidden="true"
         >
@@ -25,14 +29,37 @@ export function KioskMark({ size = 32, light = false }) {
     );
 }
 
+function BrandWordmark({ light = false }) {
+    const { isAr } = useLandingLocale();
+    const ink = light ? 'text-[#F8F9FA]' : 'text-ink';
+
+    if (isAr) {
+        const chars = Array.from(BRAND_AR);
+        const accentFrom = Math.ceil(chars.length / 2);
+        return (
+            <span className="font-extrabold text-lg sm:text-xl md:text-2xl tracking-tight leading-none whitespace-nowrap" dir="rtl">
+                {chars.map((char, i) => (
+                    <span key={`${char}-${i}`} className={i >= accentFrom ? 'text-primary' : ink}>
+                        {char}
+                    </span>
+                ))}
+            </span>
+        );
+    }
+
+    return (
+        <span className="font-extrabold text-lg sm:text-xl md:text-2xl tracking-tight leading-none whitespace-nowrap">
+            <span className={ink}>MET</span>
+            <span className="text-primary">BATI</span>
+        </span>
+    );
+}
+
 export default function Logo({ light = false, className = '' }) {
     return (
-        <div className={`flex items-center gap-3 ${className}`}>
-            <KioskMark size={32} light={light} />
-            <span className="font-extrabold text-xl md:text-2xl tracking-tight leading-none">
-                <span className={light ? 'text-[#F8F9FA]' : 'text-ink'}>MET</span>
-                <span className="text-primary">BATI</span>
-            </span>
+        <div className={`flex items-center gap-2 sm:gap-3 min-w-0 ${className}`}>
+            <KioskMark size={28} light={light} />
+            <BrandWordmark light={light} />
         </div>
     );
 }
