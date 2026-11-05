@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'kiosk/*/desk',
             'kiosk/*/jobs/*/cancel',
             'kiosk/*/print-codes/redeem',
+            'kiosk/*/templates/redeem',
             'kiosk/broadcasting/auth',
             'kiosk/*/ready',
             'kiosk/*/units/*',

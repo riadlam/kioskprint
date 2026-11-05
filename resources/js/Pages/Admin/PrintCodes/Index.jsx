@@ -91,7 +91,7 @@ export default function Index({ codes = [], email, role }) {
                     {filtered.map((code) => (
                         <article
                             key={code.id}
-                            className="group flex flex-col rounded-2xl border border-black/6 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition hover:border-primary/20 hover:shadow-[0_8px_24px_rgba(16,24,40,0.06)]"
+                            className="group flex flex-col rounded-2xl border border-black/10 bg-white p-5 shadow-[0_2px_8px_rgba(16,24,40,0.06)] transition hover:border-primary/25 hover:shadow-[0_10px_28px_rgba(16,24,40,0.08)]"
                         >
                             <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
@@ -172,7 +172,7 @@ export default function Index({ codes = [], email, role }) {
 
 function EmptyState({ onCreate, hasCodes }) {
     return (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-black/10 bg-white px-6 py-16 text-center">
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-black/15 bg-white px-6 py-16 text-center shadow-[0_2px_8px_rgba(16,24,40,0.04)]">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-primary">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-7 w-7">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6M7 4h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" />

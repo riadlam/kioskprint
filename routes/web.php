@@ -17,6 +17,7 @@ use App\Http\Controllers\KioskPrintUnitController;
 use App\Http\Controllers\KioskPrintStatusController;
 use App\Http\Controllers\KioskScreenController;
 use App\Http\Controllers\KioskTemplateController;
+use App\Http\Controllers\KioskTemplateRedeemController;
 use App\Http\Controllers\PrintDocumentController;
 use App\Http\Controllers\PrintJobController;
 use App\Http\Controllers\PrintPageController;
@@ -90,6 +91,7 @@ Route::post('/kiosk/{kiosk}/coins', KioskCoinController::class)
 Route::post('/kiosk/{kiosk}/desk', [KioskDeskController::class, 'publish'])->name('kiosk.desk.publish');
 Route::post('/kiosk/{kiosk}/jobs/{job}/cancel', [KioskDeskController::class, 'cancel'])->name('kiosk.jobs.cancel');
 Route::post('/kiosk/{kiosk}/print-codes/redeem', [KioskPrintCodeController::class, 'redeem'])->name('kiosk.print-codes.redeem');
+Route::post('/kiosk/{kiosk}/templates/redeem', KioskTemplateRedeemController::class)->name('kiosk.templates.redeem');
 
 Route::match(['GET', 'POST'], '/print/pay/satim/return', [PrintPaymentController::class, 'satimReturn'])
     ->name('print.satim.return');

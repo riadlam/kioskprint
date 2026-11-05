@@ -84,6 +84,7 @@ class AdminScreenController extends Controller
             'bytes' => (int) filesize($absolute),
             'sha256' => hash_file('sha256', $absolute),
             'is_active' => true,
+            'volume_percent' => 100,
         ]);
 
         $this->catalog->reindex();
@@ -94,14 +95,23 @@ class AdminScreenController extends Controller
 
     public function updateVideo(Request $request, KioskVideo $video): RedirectResponse
     {
-        $request->validate([
-            'is_active' => ['required', 'boolean'],
+        $data = $request->validate([
+            'is_active' => ['sometimes', 'boolean'],
+            'volume_percent' => ['sometimes', 'integer', 'min:0', 'max:100'],
         ]);
 
-        $video->update([
-            'is_active' => $request->boolean('is_active'),
-        ]);
-        $this->catalog->ping();
+        $patch = [];
+        if (array_key_exists('is_active', $data)) {
+            $patch['is_active'] = $request->boolean('is_active');
+        }
+        if (array_key_exists('volume_percent', $data)) {
+            $patch['volume_percent'] = (int) $data['volume_percent'];
+        }
+
+        if ($patch !== []) {
+            $video->update($patch);
+            $this->catalog->ping();
+        }
 
         return back();
     }

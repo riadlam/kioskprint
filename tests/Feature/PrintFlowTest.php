@@ -702,12 +702,13 @@ class PrintFlowTest extends TestCase
         ])->assertUnauthorized();
     }
 
-    public function test_a_coin_larger_than_the_amount_left_is_sent_back(): void
+    public function test_an_oversize_coin_is_credited_and_pays_the_job(): void
     {
         Storage::fake('local');
         config([
             'print.simulate_monnayeur' => false,
             'print.kiosk_coin_token' => 'test-token',
+            'queue.default' => 'sync',
         ]);
 
         $job = $this->openCashJob('kiosk-return', 50);
@@ -718,7 +719,7 @@ class PrintFlowTest extends TestCase
             ->assertJson([
                 'open' => true,
                 'remaining' => 50,
-                'max_pulses' => 4,
+                'max_pulses' => 6,
             ]);
 
         $this->coin('kiosk-return', 3, 'coin-return-20da')->assertJson([
@@ -727,32 +728,26 @@ class PrintFlowTest extends TestCase
             'remaining' => 30,
         ]);
 
-        $this->withHeader('X-Kiosk-Token', 'test-token')
-            ->postJson('/kiosk/kiosk-return/coins', [
-                'pulses' => 4,
-                'event_key' => 'coin-return-50da',
-                'returned' => true,
-            ])
-            ->assertOk()
-            ->assertJson([
-                'result' => 'returned',
-                'coin' => 50,
-                'inserted' => 20,
-                'remaining' => 30,
-            ]);
+        // 50 DA on 30 remaining → credit full amount and mark paid (Extra on Telegram).
+        $this->coin('kiosk-return', 4, 'coin-return-50da')->assertJson([
+            'result' => 'paid',
+            'inserted' => 70,
+            'remaining' => 0,
+            'complete' => true,
+        ]);
 
         $job->refresh();
-        $this->assertSame('awaiting_payment', $job->status);
-        $this->assertSame(20, (int) round((float) $job->amount_inserted));
-        $this->assertSame([], $this->printer()->units);
+        $this->assertContains($job->status, ['paid', 'printing', 'printed']);
+        $this->assertSame(70, (int) round((float) $job->amount_inserted));
     }
 
-    public function test_an_oversize_coin_is_never_credited_even_without_returned_flag(): void
+    public function test_an_oversize_first_coin_still_pays_and_prints(): void
     {
         Storage::fake('local');
         config([
             'print.simulate_monnayeur' => false,
             'print.kiosk_coin_token' => 'test-token',
+            'queue.default' => 'sync',
         ]);
 
         $job = $this->openCashJob('kiosk-oversize', 20);
@@ -763,21 +758,19 @@ class PrintFlowTest extends TestCase
             ->assertJson([
                 'open' => true,
                 'remaining' => 20,
-                'max_pulses' => 3,
+                'max_pulses' => 6,
             ]);
 
-        // Acceptor let a 50 DA coin through as a normal COIN (no returned=true).
         $this->coin('kiosk-oversize', 4, 'coin-oversize-50da')->assertJson([
-            'result' => 'returned',
-            'coin' => 50,
-            'inserted' => 0,
-            'remaining' => 20,
+            'result' => 'paid',
+            'inserted' => 50,
+            'remaining' => 0,
+            'complete' => true,
         ]);
 
         $job->refresh();
-        $this->assertSame('awaiting_payment', $job->status);
-        $this->assertSame(0, (int) round((float) $job->amount_inserted));
-        $this->assertSame([], $this->printer()->units);
+        $this->assertContains($job->status, ['paid', 'printing', 'printed']);
+        $this->assertSame(50, (int) round((float) $job->amount_inserted));
     }
 
     public function test_a_partial_coin_payment_closes_after_sixty_seconds(): void

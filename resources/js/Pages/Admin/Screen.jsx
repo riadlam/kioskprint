@@ -86,7 +86,7 @@ export default function Screen({ email, settings, videos = [] }) {
                 )}
                 <p className="mt-4 text-[13px] leading-6 text-slate">
                     Each wait plays the next video once, then the tablet returns home. A coin or a print stops the video immediately.
-                    Mute only silences attract videos — instruction voices still play at full volume.
+                    Global mute zeros every promo video. Per-video volume % is respected when mute is off. Instruction voices always stay at 100%.
                 </p>
             </form>
 
@@ -125,6 +125,40 @@ export default function Screen({ email, settings, videos = [] }) {
                                 <p className="truncate text-[14px] font-medium">{video.original_name}</p>
                                 <p className="text-[12px] text-slate">{formatSize(video.bytes)}</p>
                             </div>
+                            <label className="flex items-center gap-2 text-[12px] font-semibold text-slate">
+                                Vol
+                                <input
+                                    type="range"
+                                    min={0}
+                                    max={100}
+                                    step={5}
+                                    defaultValue={video.volume_percent ?? 100}
+                                    onMouseUp={(event) => {
+                                        const value = Number(event.currentTarget.value);
+                                        if (value === (video.volume_percent ?? 100)) {
+                                            return;
+                                        }
+                                        router.patch(
+                                            `/admin/screen/videos/${video.id}`,
+                                            { volume_percent: value },
+                                            { preserveScroll: true },
+                                        );
+                                    }}
+                                    onTouchEnd={(event) => {
+                                        const value = Number(event.currentTarget.value);
+                                        if (value === (video.volume_percent ?? 100)) {
+                                            return;
+                                        }
+                                        router.patch(
+                                            `/admin/screen/videos/${video.id}`,
+                                            { volume_percent: value },
+                                            { preserveScroll: true },
+                                        );
+                                    }}
+                                    className="h-2 w-28 accent-primary"
+                                />
+                                <span className="w-10 text-ink">{video.volume_percent ?? 100}%</span>
+                            </label>
                             <button
                                 type="button"
                                 onClick={() => router.patch(`/admin/screen/videos/${video.id}`, { is_active: !video.is_active }, { preserveScroll: true })}

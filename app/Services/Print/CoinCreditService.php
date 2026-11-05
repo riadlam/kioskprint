@@ -3,7 +3,6 @@
 namespace App\Services\Print;
 
 use App\Events\KioskCoinSeen;
-use App\Events\PrintJobCoinReturned;
 use App\Events\PrintJobFailed;
 use App\Events\PrintJobPaid;
 use App\Events\PrintJobPaymentProgress;
@@ -116,7 +115,8 @@ class CoinCreditService
             'open' => true,
             'job_id' => $job->id,
             'remaining' => $remaining,
-            'max_pulses' => self::maxPulses($remaining),
+            // Accept any mapped coin while paying; overshoot is credited and printed.
+            'max_pulses' => 6,
         ];
     }
 
@@ -235,22 +235,6 @@ class CoinCreditService
 
                 $required = $this->due($job);
                 $already = $this->inserted($job);
-                $remaining = max(0, $required - $already);
-
-                // Never credit a coin bigger than what is left, even if the
-                // acceptor failed to mark it as returned / send it to the chute.
-                if ($dinars > $remaining) {
-                    CoinEvent::query()->create([
-                        'print_job_id' => $job->id,
-                        'kiosk_id' => $kioskId,
-                        'pulses' => $pulses,
-                        'dinars' => $dinars,
-                        'event_key' => $eventKey,
-                    ]);
-
-                    return ['kind' => 'returned', 'job_id' => $job->id, 'coin' => $dinars];
-                }
-
                 $inserted = $already + $dinars;
 
                 CoinEvent::query()->create([
@@ -286,10 +270,6 @@ class CoinCreditService
 
         $job = $outcome['job_id'] ? PrintJob::query()->find($outcome['job_id']) : null;
 
-        if ($outcome['kind'] === 'returned' && $job) {
-            $this->broadcastSafely(new PrintJobCoinReturned($job, (int) $outcome['coin']));
-        }
-
         if ($outcome['kind'] === 'credited' && $job) {
             $this->broadcastSafely(new PrintJobPaymentProgress($job));
             ExpireUnpaidPrint::dispatch($job->id)->delay(
@@ -303,13 +283,7 @@ class CoinCreditService
             PrintKioskJob::dispatch($job->id);
         }
 
-        $payload = $this->view($job?->fresh(), $outcome['kind']);
-
-        if ($outcome['kind'] === 'returned') {
-            $payload['coin'] = (int) $outcome['coin'];
-        }
-
-        return $payload;
+        return $this->view($job?->fresh(), $outcome['kind']);
     }
 
     private function broadcastSafely(object $event): void

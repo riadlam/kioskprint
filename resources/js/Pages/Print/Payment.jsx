@@ -23,7 +23,6 @@ export default function Payment({ job, quote, methods, cardMinimum = 75, holdSec
     const [paymentEnded, setPaymentEnded] = useState('');
     const holdCap = Math.max(5, Number(holdLimit) || 60);
     const [holdSeconds, setHoldSeconds] = useState(holdCap);
-    const [coinBack, setCoinBack] = useState(null);
     const required = Number(quote.amount || 0);
     const remaining = Math.max(0, Math.round((required - inserted) * 100) / 100);
     const progress = required > 0 ? Math.min(1, inserted / required) : 0;
@@ -104,15 +103,6 @@ export default function Payment({ job, quote, methods, cardMinimum = 75, holdSec
                 setPagesDone(total);
             }
             setPhase('done');
-        });
-        channel.listen('.PrintJobCoinReturned', (event) => {
-            if (!sameJob(event)) {
-                return;
-            }
-            setCoinBack({
-                coin: Number(event.coin || 0),
-                remaining: Number(event.remaining || 0),
-            });
         });
         channel.listen('.PrintJobFailed', (event) => {
             if (!sameJob(event)) {
@@ -208,16 +198,6 @@ export default function Payment({ job, quote, methods, cardMinimum = 75, holdSec
 
         return () => clearInterval(timer);
     }, [screen, inserted, holdCap]);
-
-    useEffect(() => {
-        if (!coinBack) {
-            return undefined;
-        }
-
-        const timer = setTimeout(() => setCoinBack(null), 4500);
-
-        return () => clearTimeout(timer);
-    }, [coinBack]);
 
     const meta = {
         monnayeur: {
@@ -402,21 +382,6 @@ export default function Payment({ job, quote, methods, cardMinimum = 75, holdSec
                 <PaidDialog title={t.paySuccessTitle} body={t.payDoneBody} amount={formatMoney(quote.amount, locale)} />
             )}
             {phase !== 'done' && <PayErrorDialog code={paymentError} copy={t} />}
-            {coinBack && (
-                <div className="fixed inset-0 z-40 flex items-center justify-center bg-[#101513]/45 px-6">
-                    <div className="w-full max-w-[320px] rounded-3xl bg-white px-6 py-8 text-center shadow-2xl">
-                        <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-red-50 text-red-600">
-                            <svg viewBox="0 0 24 24" className="h-10 w-10" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
-                                <circle cx="12" cy="12" r="9" />
-                                <path d="M12 8v5" strokeLinecap="round" />
-                                <path d="M12 16.5h.01" strokeLinecap="round" />
-                            </svg>
-                        </span>
-                        <p className="mt-5 text-[1.25rem] font-black text-ink">{t.payCoinHighTitle}</p>
-                        <p className="mt-2 text-[13px] font-medium leading-5 text-slate">{t.payCoinHighBody(coinBack.coin, coinBack.remaining)}</p>
-                    </div>
-                </div>
-            )}
         </PhoneShell>
     );
 }

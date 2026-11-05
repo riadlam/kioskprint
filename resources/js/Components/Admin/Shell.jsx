@@ -21,7 +21,7 @@ export default function AdminShell({ title, subtitle, active, email, role, child
     const roleLabel = isProfessor ? 'أستاذ' : 'Operator';
 
     return (
-        <div className={`min-h-screen bg-[#f4f6f5] text-ink ${isProfessor ? 'font-[family-name:var(--font-arabic)]' : ''}`} dir={isProfessor ? 'rtl' : undefined}>
+        <div className={`min-h-screen bg-[#e8ecea] text-ink ${isProfessor ? 'font-[family-name:var(--font-arabic)]' : ''}`} dir={isProfessor ? 'rtl' : undefined}>
             <Head title={title} />
             <div className="flex min-h-screen">
                 <aside className="hidden w-[248px] shrink-0 flex-col bg-[#0f1412] text-white md:flex">

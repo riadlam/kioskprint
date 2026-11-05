@@ -13,6 +13,7 @@ class KioskVideo extends Model
         'bytes',
         'sha256',
         'is_active',
+        'volume_percent',
     ];
 
     protected function casts(): array
@@ -21,6 +22,7 @@ class KioskVideo extends Model
             'position' => 'integer',
             'bytes' => 'integer',
             'is_active' => 'boolean',
+            'volume_percent' => 'integer',
         ];
     }
 }
