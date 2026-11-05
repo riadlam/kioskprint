@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import AnimateIn from './AnimateIn';
+import { useLandingLocale } from '../lib/LandingLocale';
 
 function CountUp({ value, className }) {
     const ref = useRef(null);
@@ -44,53 +45,34 @@ function CountUp({ value, className }) {
     );
 }
 
-const stats = [
-    {
-        value: '24/7',
-        label: 'Always available',
-        sub: 'Every kiosk, every day',
-        icon: (
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <circle cx="12" cy="12" r="9" />
-                <path d="M12 7v5l3 2" />
-            </svg>
-        ),
-    },
-    {
-        value: '<60s',
-        label: 'Print to collect',
-        sub: 'From scan to handoff',
-        icon: (
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" />
-            </svg>
-        ),
-    },
-    {
-        value: '100%',
-        label: 'Self-service',
-        sub: 'No queues, no waiting',
-        icon: (
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <path d="M12 3 20 7v6c0 5-3.5 7.5-8 8.5C7.5 20.5 4 18 4 13V7l8-4Z" />
-                <path d="m9 12 2 2 4-4" />
-            </svg>
-        ),
-    },
-    {
-        value: 1000,
-        suffix: '+',
-        label: 'Kiosks vision',
-        sub: 'Nationwide by 2030',
-        icon: (
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" />
-            </svg>
-        ),
-    },
+const statIcons = [
+    (
+        <svg key="clock" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v5l3 2" />
+        </svg>
+    ),
+    (
+        <svg key="bolt" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" />
+        </svg>
+    ),
+    (
+        <svg key="shield" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <path d="M12 3 20 7v6c0 5-3.5 7.5-8 8.5C7.5 20.5 4 18 4 13V7l8-4Z" />
+            <path d="m9 12 2 2 4-4" />
+        </svg>
+    ),
+    (
+        <svg key="building" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" />
+        </svg>
+    ),
 ];
 
 export default function Stats() {
+    const { t } = useLandingLocale();
+
     return (
         <section className="relative section-padding section-y overflow-hidden bg-[#0B1220]">
             <div
@@ -111,25 +93,23 @@ export default function Stats() {
                 <AnimateIn>
                     <div className="text-center max-w-3xl mx-auto mb-14 md:mb-16">
                         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary mb-4">
-                            Built for Algeria
+                            {t.stats.eyebrow}
                         </p>
                         <h2 className="font-extrabold text-3xl md:text-5xl text-white leading-tight tracking-tight">
-                            Making printing simple for{' '}
-                            <span className="text-primary">everyone, everywhere.</span>
+                            {t.stats.title} <span className="text-primary">{t.stats.titleAccent}</span>
                         </h2>
                         <p className="mt-5 text-base md:text-lg text-white/55 max-w-2xl mx-auto leading-relaxed">
-                            Fast, secure, and always on — Metbati kiosks put high-quality printing within reach across
-                            campuses, offices, and public spaces.
+                            {t.stats.body}
                         </p>
                     </div>
                 </AnimateIn>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
-                    {stats.map((stat, i) => (
+                    {t.stats.items.map((stat, i) => (
                         <AnimateIn key={stat.label} delay={i * 0.08}>
                             <div className="group relative h-full rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-sm p-6 md:p-7 transition-all duration-300 hover:border-primary/40 hover:bg-white/[0.07]">
                                 <div className="mb-5 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-primary/15 text-primary ring-1 ring-primary/25">
-                                    {stat.icon}
+                                    {statIcons[i]}
                                 </div>
                                 <div className="flex items-baseline gap-0.5">
                                     <CountUp

@@ -2,19 +2,21 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Logo from './Logo';
 import { ArrowRight, CloseIcon, MenuIcon } from './Icons';
-
-const links = [
-    { href: '#home', label: 'Home' },
-    { href: '#about', label: 'About' },
-    { href: '#how-it-works', label: 'How It Works' },
-    { href: '#partner', label: 'Partner' },
-    { href: '#blog', label: 'Blog' },
-    { href: '#contact', label: 'Contact' },
-];
+import { useLandingLocale } from '../lib/LandingLocale';
 
 export default function Navbar() {
+    const { t, locale, setLocale, isAr } = useLandingLocale();
     const [open, setOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
+
+    const links = [
+        { href: '#home', label: t.nav.home },
+        { href: '#about', label: t.nav.about },
+        { href: '#how-it-works', label: t.nav.how },
+        { href: '#partner', label: t.nav.partner },
+        { href: '#blog', label: t.nav.blog },
+        { href: '#contact', label: t.nav.contact },
+    ];
 
     useEffect(() => {
         const onScroll = () => setScrolled(window.scrollY > 24);
@@ -37,7 +39,7 @@ export default function Navbar() {
                     <a href="#home" aria-label="Metbati home">
                         <Logo />
                     </a>
-                    <div className="hidden lg:flex items-center gap-10">
+                    <div className="hidden lg:flex items-center gap-8">
                         {links.map((link, i) => (
                             <a
                                 key={link.href}
@@ -49,21 +51,52 @@ export default function Navbar() {
                                 {link.label}
                             </a>
                         ))}
-                        <a
-                            href="#print"
-                            className="btn-primary !py-2 !px-5 !text-[13px] uppercase tracking-wider"
-                        >
-                            Print Now
+                        <div className="flex items-center rounded-full border border-black/10 bg-white/80 p-0.5 text-[12px] font-semibold">
+                            <button
+                                type="button"
+                                onClick={() => setLocale('ar')}
+                                className={`rounded-full px-2.5 py-1 ${locale === 'ar' ? 'bg-ink text-white' : 'text-slate'}`}
+                            >
+                                {t.lang.ar}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setLocale('en')}
+                                className={`rounded-full px-2.5 py-1 ${locale === 'en' ? 'bg-ink text-white' : 'text-slate'}`}
+                            >
+                                {t.lang.en}
+                            </button>
+                        </div>
+                        <a href="#print" className="btn-primary !py-2 !px-5 !text-[13px] uppercase tracking-wider">
+                            {t.nav.printNow}
                         </a>
                     </div>
-                    <button
-                        type="button"
-                        className="lg:hidden p-2 -mr-2 text-ink"
-                        aria-label={open ? 'Close menu' : 'Open menu'}
-                        onClick={() => setOpen(!open)}
-                    >
-                        {open ? <CloseIcon /> : <MenuIcon />}
-                    </button>
+                    <div className="flex items-center gap-2 lg:hidden">
+                        <div className="flex items-center rounded-full border border-black/10 bg-white/80 p-0.5 text-[11px] font-semibold">
+                            <button
+                                type="button"
+                                onClick={() => setLocale('ar')}
+                                className={`rounded-full px-2 py-1 ${locale === 'ar' ? 'bg-ink text-white' : 'text-slate'}`}
+                            >
+                                ع
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setLocale('en')}
+                                className={`rounded-full px-2 py-1 ${locale === 'en' ? 'bg-ink text-white' : 'text-slate'}`}
+                            >
+                                EN
+                            </button>
+                        </div>
+                        <button
+                            type="button"
+                            className="p-2 -me-2 text-ink"
+                            aria-label={open ? t.nav.closeMenu : t.nav.openMenu}
+                            onClick={() => setOpen(!open)}
+                        >
+                            {open ? <CloseIcon /> : <MenuIcon />}
+                        </button>
+                    </div>
                 </nav>
             </motion.header>
             {open && (
@@ -79,7 +112,7 @@ export default function Navbar() {
                         </a>
                     ))}
                     <a href="#print" className="btn-primary mt-4 justify-center" onClick={() => setOpen(false)}>
-                        Print Now <ArrowRight />
+                        {t.nav.printNow} <ArrowRight className={isAr ? 'rotate-180' : ''} />
                     </a>
                 </div>
             )}

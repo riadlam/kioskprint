@@ -1,38 +1,38 @@
 import AnimateIn from './AnimateIn';
 import { ArrowRight, MaskIcon } from './Icons';
+import { useLandingLocale } from '../lib/LandingLocale';
 
-const metrics = [
-    { icon: '/assets/metbati/icons/27-location.png', title: 'Algiers', sub: 'Live Today' },
-    { icon: '/assets/metbati/icons/23-office.png', title: '2030', sub: 'Expansion Target' },
-    { icon: '/assets/metbati/icons/25-metro.png', title: '1,000+', sub: 'Kiosk Vision' },
+const metricIcons = [
+    '/assets/metbati/icons/27-location.png',
+    '/assets/metbati/icons/23-office.png',
+    '/assets/metbati/icons/25-metro.png',
 ];
 
 export default function Vision() {
+    const { t, isAr } = useLandingLocale();
+
     return (
         <section id="partner" className="section-padding section-y bg-gray-50 border-t border-gray-200">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
                 <AnimateIn direction="left">
-                    <h2 className="heading-section mb-4">Starting in Algiers. Built for Algeria.</h2>
-                    <p className="text-body mb-10 max-w-md">
-                        Metbati kiosks are live in Algiers today, with a platform built to scale to 1,000+ kiosks
-                        across Algeria by 2030.
-                    </p>
+                    <h2 className="heading-section mb-4">{t.vision.title}</h2>
+                    <p className="text-body mb-10 max-w-md">{t.vision.body}</p>
                     <div className="grid grid-cols-3 gap-6 mb-10 max-w-md">
-                        {metrics.map((m) => (
+                        {t.vision.metrics.map((m, i) => (
                             <div key={m.sub}>
-                                <MaskIcon src={m.icon} size={28} className="mb-3" />
+                                <MaskIcon src={metricIcons[i]} size={28} className="mb-3" />
                                 <p className="font-extrabold text-h3 text-ink">{m.title}</p>
                                 <p className="text-small text-slate mt-1">{m.sub}</p>
                             </div>
                         ))}
                     </div>
                     <a className="btn-secondary" href="#contact">
-                        View All Locations <ArrowRight />
+                        {t.vision.cta} <ArrowRight className={isAr ? 'rotate-180' : ''} />
                     </a>
                 </AnimateIn>
                 <AnimateIn direction="right" className="flex flex-col items-center">
                     <img
-                        alt="Illustration of Metbati's 2030 vision for a nationwide kiosk network"
+                        alt={t.vision.alt}
                         src="/images/algeria-vision.png"
                         width={720}
                         height={640}
@@ -41,9 +41,7 @@ export default function Vision() {
                             e.currentTarget.src = '/images/vision-fallback.svg';
                         }}
                     />
-                    <p className="text-caption uppercase tracking-widest text-slate mt-3">
-                        Our 2030 vision (not current coverage)
-                    </p>
+                    <p className="text-caption uppercase tracking-widest text-slate mt-3">{t.vision.caption}</p>
                 </AnimateIn>
             </div>
         </section>

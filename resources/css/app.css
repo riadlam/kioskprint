@@ -8,6 +8,7 @@
 
 @theme {
     --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+    --font-arabic: 'Cairo', 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
     --color-primary: #059669;
     --color-primary-hover: #047857;
     --color-primary-dark: #065f46;
@@ -28,6 +29,19 @@ body {
     font-family: var(--font-sans);
     background-color: var(--color-brand-cream);
     color: var(--color-ink);
+}
+
+body.font-arabic {
+    font-family: var(--font-arabic);
+}
+
+body.font-arabic .heading-section,
+body.font-arabic .heading-display,
+body.font-arabic .text-display,
+body.font-arabic h1,
+body.font-arabic h2,
+body.font-arabic h3 {
+    letter-spacing: 0;
 }
 
 ::selection {

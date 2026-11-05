@@ -1,26 +1,19 @@
 import AnimateIn from './AnimateIn';
 import { ArrowRight, Check } from './Icons';
-
-const bullets = [
-    'Intuitive 24" touchscreen',
-    'Multi-language support',
-    'High-speed industrial printer',
-    'Secure & enclosed design',
-];
+import { useLandingLocale } from '../lib/LandingLocale';
 
 export default function KioskShowcase() {
+    const { t, isAr } = useLandingLocale();
+
     return (
         <section className="section-padding section-y bg-white border-t border-gray-200">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
                 <AnimateIn direction="left">
-                    <p className="eyebrow mb-3">Smart printing, reimagined</p>
-                    <h2 className="heading-section mb-5">Metbati Smart Kiosks</h2>
-                    <p className="text-body mb-8 max-w-lg">
-                        Our kiosks are built for speed, security, and reliability, designed for high-traffic locations
-                        and engineered to run unattended, around the clock.
-                    </p>
+                    <p className="eyebrow mb-3">{t.showcase.eyebrow}</p>
+                    <h2 className="heading-section mb-5">{t.showcase.title}</h2>
+                    <p className="text-body mb-8 max-w-lg">{t.showcase.body}</p>
                     <ul className="space-y-4 mb-9">
-                        {bullets.map((item) => (
+                        {t.showcase.bullets.map((item) => (
                             <li key={item} className="flex items-center gap-3">
                                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                                     <Check />
@@ -30,7 +23,7 @@ export default function KioskShowcase() {
                         ))}
                     </ul>
                     <a className="btn-secondary" href="#how-it-works">
-                        Explore Kiosks <ArrowRight />
+                        {t.showcase.cta} <ArrowRight className={isAr ? 'rotate-180' : ''} />
                     </a>
                 </AnimateIn>
                 <AnimateIn direction="right" className="relative flex justify-center w-full">
@@ -39,7 +32,7 @@ export default function KioskShowcase() {
                         className="absolute inset-0 -z-10 m-auto h-[70%] w-[70%] rounded-full bg-primary/5 blur-[90px]"
                     />
                     <img
-                        alt="Metbati smart printing kiosk, three-quarter view"
+                        alt={t.showcase.alt}
                         src="/images/kiosk-machine.png"
                         width={700}
                         height={620}

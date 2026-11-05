@@ -23,7 +23,7 @@
         <link rel="icon" href="/images/icon.svg" type="image/svg+xml" />
         <title inertia>{{ config('app.name', 'Metbati') }}</title>
         <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=plus-jakarta-sans:400,500,600,700,800" rel="stylesheet" />
+        <link href="https://fonts.bunny.net/css?family=cairo:400,500,600,700,800|plus-jakarta-sans:400,500,600,700,800" rel="stylesheet" />
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/app.jsx'])
         @if ($scannerPreload)
