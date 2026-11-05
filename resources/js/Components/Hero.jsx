@@ -21,7 +21,7 @@ export default function Hero() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-center">
                     <div className="max-w-xl">
                         <AnimateIn>
-                            <p className="inline-flex items-center gap-2 text-[11px] uppercase tracking-widest text-slate mb-8">
+                            <p className="inline-flex items-center gap-2 text-sm md:text-base uppercase tracking-widest text-slate mb-8">
                                 <span className="h-1.5 w-1.5 bg-primary rounded-full" />
                                 {t.hero.eyebrow}
                             </p>
@@ -75,10 +75,10 @@ export default function Hero() {
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.5, duration: 0.5 }}
                             >
-                                <p className="text-[14px] font-medium leading-none text-ink tracking-tight mb-1">
+                                <p className="text-base font-medium leading-none text-ink tracking-tight mb-1.5">
                                     {t.hero.badgeAccess}
                                 </p>
-                                <p className="text-[10px] leading-none text-slate uppercase tracking-wider">
+                                <p className="text-xs leading-none text-slate uppercase tracking-wider">
                                     {t.hero.badgeAccessSub}
                                 </p>
                             </motion.div>
@@ -89,10 +89,10 @@ export default function Hero() {
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.65, duration: 0.5 }}
                             >
-                                <p className="text-[14px] font-medium leading-none text-ink tracking-tight mb-1">
+                                <p className="text-base font-medium leading-none text-ink tracking-tight mb-1.5">
                                     {t.hero.badgeSpeed}
                                 </p>
-                                <p className="text-[10px] leading-none text-slate uppercase tracking-wider">
+                                <p className="text-xs leading-none text-slate uppercase tracking-wider">
                                     {t.hero.badgeSpeedSub}
                                 </p>
                             </motion.div>

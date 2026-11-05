@@ -45,10 +45,10 @@ export default function Newsletter() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center mb-12">
                         <AnimateIn>
                             <div className={`text-center ${isAr ? 'md:text-right' : 'md:text-left'}`}>
-                                <h2 className="text-3xl md:text-[34px] leading-tight font-bold text-ink mb-3">
+                                <h2 className="text-3xl md:text-4xl leading-tight font-bold text-ink mb-3">
                                     {t.newsletter.title}
                                 </h2>
-                                <p className="text-slate text-[15px] mb-8">{t.newsletter.body}</p>
+                                <p className="text-slate text-lg mb-8">{t.newsletter.body}</p>
                                 <form className="relative max-w-md mx-auto md:mx-0" onSubmit={onSubmit}>
                                     <input
                                         type="email"
@@ -56,13 +56,13 @@ export default function Newsletter() {
                                         placeholder={t.newsletter.placeholder}
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
-                                        className={`w-full py-4 rounded-xl border border-gray-200 shadow-sm bg-white text-ink placeholder:text-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 ${
-                                            isAr ? 'pr-6 pl-[130px]' : 'pl-6 pr-[130px]'
+                                        className={`w-full py-4 rounded-xl border border-gray-200 shadow-sm bg-white text-base md:text-lg text-ink placeholder:text-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 ${
+                                            isAr ? 'pr-6 pl-[140px]' : 'pl-6 pr-[140px]'
                                         }`}
                                     />
                                     <button
                                         type="submit"
-                                        className={`absolute top-2 bottom-2 px-6 rounded-lg bg-primary text-white font-medium hover:opacity-90 transition-colors shadow-sm ${
+                                        className={`absolute top-2 bottom-2 px-6 rounded-lg bg-primary text-white text-base font-semibold hover:opacity-90 transition-colors shadow-sm ${
                                             isAr ? 'left-2' : 'right-2'
                                         }`}
                                     >
@@ -91,7 +91,7 @@ export default function Newsletter() {
                                     <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
                                         {tagIcons[i]}
                                     </span>
-                                    <span className="text-[13px] font-semibold text-ink">{label}</span>
+                                    <span className="text-base font-semibold text-ink">{label}</span>
                                 </div>
                             ))}
                         </div>

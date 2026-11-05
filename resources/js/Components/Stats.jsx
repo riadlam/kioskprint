@@ -92,13 +92,13 @@ export default function Stats() {
             <div className="relative max-w-6xl mx-auto">
                 <AnimateIn>
                     <div className="text-center max-w-3xl mx-auto mb-14 md:mb-16">
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary mb-4">
+                        <p className="text-sm md:text-base font-semibold uppercase tracking-[0.2em] text-primary mb-4">
                             {t.stats.eyebrow}
                         </p>
-                        <h2 className="font-extrabold text-3xl md:text-5xl text-white leading-tight tracking-tight">
+                        <h2 className="font-extrabold text-4xl md:text-5xl lg:text-6xl text-white leading-tight tracking-tight">
                             {t.stats.title} <span className="text-primary">{t.stats.titleAccent}</span>
                         </h2>
-                        <p className="mt-5 text-base md:text-lg text-white/55 max-w-2xl mx-auto leading-relaxed">
+                        <p className="mt-5 text-lg md:text-xl text-white/55 max-w-2xl mx-auto leading-relaxed">
                             {t.stats.body}
                         </p>
                     </div>
@@ -122,8 +122,8 @@ export default function Stats() {
                                         </span>
                                     )}
                                 </div>
-                                <p className="mt-3 text-base font-semibold text-white">{stat.label}</p>
-                                <p className="mt-1 text-sm text-white/45">{stat.sub}</p>
+                                <p className="mt-3 text-lg font-semibold text-white">{stat.label}</p>
+                                <p className="mt-1 text-base text-white/45">{stat.sub}</p>
                                 <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                             </div>
                         </AnimateIn>

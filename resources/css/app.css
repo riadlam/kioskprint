@@ -44,6 +44,11 @@ body.font-arabic h3 {
     letter-spacing: 0;
 }
 
+body.font-arabic .text-body,
+body.font-arabic p {
+    line-height: 1.75;
+}
+
 ::selection {
     background-color: color-mix(in oklab, var(--color-primary) 25%, transparent);
 }
@@ -57,43 +62,43 @@ body.font-arabic h3 {
 }
 
 .eyebrow {
-    @apply text-xs font-semibold uppercase tracking-widest text-primary;
+    @apply text-sm md:text-base font-semibold uppercase tracking-widest text-primary;
 }
 
 .heading-section {
-    @apply text-3xl md:text-[2.75rem] font-extrabold leading-tight tracking-tight text-ink;
+    @apply text-4xl md:text-[3.25rem] font-extrabold leading-tight tracking-tight text-ink;
 }
 
 .heading-display {
-    @apply text-[2.75rem] md:text-[3.5rem] lg:text-[4.5rem] font-extrabold leading-[1.05] tracking-tight text-ink;
+    @apply text-[3.25rem] md:text-[4rem] lg:text-[5.25rem] font-extrabold leading-[1.05] tracking-tight text-ink;
 }
 
 .text-display {
-    @apply text-[2.75rem] leading-[1.15] tracking-tight;
+    @apply text-[3.25rem] leading-[1.15] tracking-tight;
 }
 
 .text-display-lg {
-    @apply md:text-[3.5rem] md:leading-[1.1];
+    @apply md:text-[4rem] md:leading-[1.1];
 }
 
 .text-display-xl {
-    @apply lg:text-[4.5rem] lg:leading-[1.05] lg:tracking-tighter;
+    @apply lg:text-[5.25rem] lg:leading-[1.05] lg:tracking-tighter;
 }
 
 .text-body {
-    @apply text-base md:text-lg leading-relaxed text-slate;
+    @apply text-lg md:text-xl leading-relaxed text-slate;
 }
 
 .text-small {
-    @apply text-sm;
+    @apply text-base;
 }
 
 .text-h3 {
-    @apply text-[1.75rem] font-extrabold tracking-tight;
+    @apply text-[2rem] font-extrabold tracking-tight;
 }
 
 .text-caption {
-    @apply text-xs uppercase tracking-widest;
+    @apply text-sm uppercase tracking-widest;
 }
 
 .text-primary {
@@ -121,7 +126,7 @@ body.font-arabic h3 {
 }
 
 .btn-primary {
-    @apply inline-flex items-center gap-2 rounded-xl bg-primary px-7 py-3.5 text-base font-semibold text-white shadow-sm transition-all duration-200 active:scale-[0.98];
+    @apply inline-flex items-center gap-2 rounded-xl bg-primary px-8 py-4 text-lg font-semibold text-white shadow-sm transition-all duration-200 active:scale-[0.98];
 }
 
 .btn-primary:hover {
@@ -129,11 +134,11 @@ body.font-arabic h3 {
 }
 
 .btn-secondary {
-    @apply inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-7 py-3.5 text-base font-semibold text-ink transition-all duration-200 hover:border-ink hover:shadow-sm active:scale-[0.98];
+    @apply inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-8 py-4 text-lg font-semibold text-ink transition-all duration-200 hover:border-ink hover:shadow-sm active:scale-[0.98];
 }
 
 .btn-text {
-    @apply inline-flex items-center gap-2 text-base font-semibold text-primary transition-all duration-200 hover:gap-3;
+    @apply inline-flex items-center gap-2 text-lg font-semibold text-primary transition-all duration-200 hover:gap-3;
 }
 
 .shadow-ds-sm {

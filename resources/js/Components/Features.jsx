@@ -19,7 +19,7 @@ export default function Features() {
             <AnimateIn>
                 <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-12">
                     <div>
-                        <p className="eyebrow mb-3 uppercase tracking-widest text-sm font-semibold text-slate">
+                        <p className="eyebrow mb-3 uppercase tracking-widest font-semibold text-slate">
                             {t.features.eyebrow}
                         </p>
                         <h2 className="heading-section max-w-xl">
@@ -40,8 +40,8 @@ export default function Features() {
                             <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center mb-8">
                                 <MaskIcon src={featureIcons[index]} size={32} />
                             </div>
-                            <h3 className="font-bold text-lg text-ink mb-3">{feature.title}</h3>
-                            <p className="text-sm text-slate leading-relaxed">{feature.description}</p>
+                            <h3 className="font-bold text-xl text-ink mb-3">{feature.title}</h3>
+                            <p className="text-base md:text-lg text-slate leading-relaxed">{feature.description}</p>
                         </div>
                     </AnimateIn>
                 ))}

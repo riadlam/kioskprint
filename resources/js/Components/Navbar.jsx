@@ -44,35 +44,35 @@ export default function Navbar() {
                             <a
                                 key={link.href}
                                 href={link.href}
-                                className={`text-[13px] uppercase tracking-wider font-medium transition-colors duration-200 ${
+                                className={`text-[15px] uppercase tracking-wider font-medium transition-colors duration-200 ${
                                     i === 0 ? 'text-primary' : 'text-slate hover:text-ink'
                                 }`}
                             >
                                 {link.label}
                             </a>
                         ))}
-                        <div className="flex items-center rounded-full border border-black/10 bg-white/80 p-0.5 text-[12px] font-semibold">
+                        <div className="flex items-center rounded-full border border-black/10 bg-white/80 p-0.5 text-sm font-semibold">
                             <button
                                 type="button"
                                 onClick={() => setLocale('ar')}
-                                className={`rounded-full px-2.5 py-1 ${locale === 'ar' ? 'bg-ink text-white' : 'text-slate'}`}
+                                className={`rounded-full px-3 py-1.5 ${locale === 'ar' ? 'bg-ink text-white' : 'text-slate'}`}
                             >
                                 {t.lang.ar}
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setLocale('en')}
-                                className={`rounded-full px-2.5 py-1 ${locale === 'en' ? 'bg-ink text-white' : 'text-slate'}`}
+                                className={`rounded-full px-3 py-1.5 ${locale === 'en' ? 'bg-ink text-white' : 'text-slate'}`}
                             >
                                 {t.lang.en}
                             </button>
                         </div>
-                        <a href="#print" className="btn-primary !py-2 !px-5 !text-[13px] uppercase tracking-wider">
+                        <a href="#print" className="btn-primary !py-2.5 !px-5 !text-[15px] uppercase tracking-wider">
                             {t.nav.printNow}
                         </a>
                     </div>
                     <div className="flex items-center gap-2 lg:hidden">
-                        <div className="flex items-center rounded-full border border-black/10 bg-white/80 p-0.5 text-[11px] font-semibold">
+                        <div className="flex items-center rounded-full border border-black/10 bg-white/80 p-0.5 text-sm font-semibold">
                             <button
                                 type="button"
                                 onClick={() => setLocale('ar')}
@@ -105,7 +105,7 @@ export default function Navbar() {
                         <a
                             key={link.href}
                             href={link.href}
-                            className="text-lg font-semibold text-ink py-2 border-b border-gray-100"
+                            className="text-xl font-semibold text-ink py-2 border-b border-gray-100"
                             onClick={() => setOpen(false)}
                         >
                             {link.label}

@@ -29,9 +29,9 @@ export default function HowItWorks() {
                             <div className="w-24 h-24 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center mb-8 mx-auto">
                                 <MaskIcon src={stepIcons[index]} size={48} />
                             </div>
-                            <div className="text-primary font-bold text-xl mb-3">{step.num}</div>
-                            <h3 className="font-bold text-lg text-ink mb-3">{step.title}</h3>
-                            <p className="text-sm text-slate leading-relaxed">{step.text}</p>
+                            <div className="text-primary font-bold text-2xl mb-3">{step.num}</div>
+                            <h3 className="font-bold text-xl text-ink mb-3">{step.title}</h3>
+                            <p className="text-base md:text-lg text-slate leading-relaxed">{step.text}</p>
                         </div>
                         {index < t.how.steps.length - 1 && (
                             <div
