@@ -3,7 +3,7 @@ import AnimateIn from './AnimateIn';
 import { ArrowRight } from './Icons';
 import { useLandingLocale } from '../lib/LandingLocale';
 
-const kioskSrc = '/images/kiosk-real.png';
+const kioskSrc = '/images/kiosk-real.jpg';
 
 export default function Hero() {
     const { t, isAr } = useLandingLocale();
@@ -59,7 +59,7 @@ export default function Hero() {
 
                     <div className="relative flex justify-center lg:justify-end order-1 lg:order-2 px-1 sm:px-0">
                         <motion.div
-                            className="relative w-full max-w-[300px] xs:max-w-[340px] sm:max-w-[400px] md:max-w-[460px] lg:max-w-[520px]"
+                            className="relative w-full max-w-[210px] sm:max-w-[240px] md:max-w-[280px] lg:max-w-[320px]"
                             initial={{ opacity: 0, y: 28, scale: 0.96 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             transition={{ duration: 0.85, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}

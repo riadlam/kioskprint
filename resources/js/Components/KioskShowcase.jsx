@@ -3,7 +3,7 @@ import AnimateIn from './AnimateIn';
 import { ArrowRight, Check } from './Icons';
 import { useLandingLocale } from '../lib/LandingLocale';
 
-const kioskSrc = '/images/kiosk-real.png';
+const kioskSrc = '/images/kiosk-real.jpg';
 
 export default function KioskShowcase() {
     const { t, isAr } = useLandingLocale();
@@ -40,7 +40,7 @@ export default function KioskShowcase() {
                         aria-hidden="true"
                         className="absolute inset-0 -z-10 m-auto h-[65%] w-[75%] rounded-full bg-primary/10 blur-[90px]"
                     />
-                    <div className="relative w-full max-w-[280px] sm:max-w-[360px] md:max-w-[420px]">
+                    <div className="relative w-full max-w-[200px] sm:max-w-[240px] md:max-w-[280px]">
                         <div
                             aria-hidden="true"
                             className="absolute inset-x-[10%] bottom-[2%] h-[10%] rounded-[100%] bg-ink/15 blur-xl"
