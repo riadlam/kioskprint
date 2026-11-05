@@ -3,7 +3,7 @@ import AnimateIn from './AnimateIn';
 import { ArrowRight } from './Icons';
 import { useLandingLocale } from '../lib/LandingLocale';
 
-const kioskSrc = '/images/kiosk-hero.png';
+const kioskSrc = '/images/kiosk-real.jpg';
 
 export default function Hero() {
     const { t, isAr } = useLandingLocale();
@@ -14,12 +14,17 @@ export default function Hero() {
             className="relative min-h-[100svh] flex items-start overflow-hidden bg-[#F6F4F0] border-b border-gray-200"
         >
             <div
-                className="absolute top-1/2 end-0 -translate-y-1/2 w-[min(800px,90vw)] h-[min(800px,90vw)] rounded-full bg-white/60 blur-[120px] pointer-events-none"
+                className="absolute top-[18%] end-[-10%] w-[min(720px,95vw)] h-[min(720px,95vw)] rounded-full bg-primary/10 blur-[110px] pointer-events-none"
                 aria-hidden="true"
             />
+            <div
+                className="absolute bottom-[-10%] start-[-15%] w-[min(480px,80vw)] h-[min(480px,80vw)] rounded-full bg-emerald-200/30 blur-[100px] pointer-events-none"
+                aria-hidden="true"
+            />
+
             <div className="relative section-padding w-full pt-[84px] pb-12 sm:pt-[88px] sm:pb-16 md:pt-[96px] md:pb-24">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 sm:gap-12 lg:gap-8 items-center">
-                    <div className="max-w-xl mx-auto lg:mx-0 text-center lg:text-start w-full">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 sm:gap-12 lg:gap-10 items-center">
+                    <div className="max-w-xl mx-auto lg:mx-0 text-center lg:text-start w-full order-2 lg:order-1">
                         <AnimateIn>
                             <p className="inline-flex items-center gap-2 text-sm md:text-base uppercase tracking-widest text-slate mb-5 sm:mb-8">
                                 <span className="h-1.5 w-1.5 bg-primary rounded-full shrink-0" />
@@ -41,7 +46,7 @@ export default function Hero() {
                             </p>
                         </AnimateIn>
                         <AnimateIn delay={0.15}>
-                            <div className="flex flex-col xs:flex-row sm:flex-row flex-wrap gap-3 sm:gap-4 justify-center lg:justify-start">
+                            <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 justify-center lg:justify-start">
                                 <a className="btn-primary w-full sm:w-auto" href="#partner">
                                     {t.hero.partner} <ArrowRight className={isAr ? 'rotate-180' : ''} />
                                 </a>
@@ -51,47 +56,61 @@ export default function Hero() {
                             </div>
                         </AnimateIn>
                     </div>
-                    <div className="relative flex justify-center lg:justify-end px-2 sm:px-0">
+
+                    <div className="relative flex justify-center lg:justify-end order-1 lg:order-2 px-1 sm:px-0">
                         <motion.div
-                            className="relative w-full max-w-[280px] sm:max-w-[420px] md:max-w-[500px] lg:max-w-[650px] flex items-center justify-center"
-                            initial={{ opacity: 0, scale: 0.96 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ duration: 0.8, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                            className="relative w-full max-w-[300px] xs:max-w-[340px] sm:max-w-[400px] md:max-w-[460px] lg:max-w-[520px]"
+                            initial={{ opacity: 0, y: 28, scale: 0.96 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            transition={{ duration: 0.85, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
                         >
-                            <div className="relative z-10 w-full">
+                            <div
+                                aria-hidden="true"
+                                className="absolute inset-x-[8%] bottom-[4%] h-[12%] rounded-[100%] bg-ink/20 blur-2xl"
+                            />
+                            <div
+                                aria-hidden="true"
+                                className="absolute -inset-6 sm:-inset-10 rounded-[40%] bg-primary/15 blur-3xl"
+                            />
+
+                            <motion.div
+                                className="relative z-10 animate-float"
+                                style={{ animationDuration: '7s' }}
+                            >
                                 <img
                                     alt={t.hero.kioskAlt}
-                                    className="w-full h-auto select-none drop-shadow-2xl recolor-green"
+                                    className="relative z-10 w-full h-auto select-none drop-shadow-[0_28px_50px_rgba(6,78,59,0.28)]"
                                     src={kioskSrc}
-                                    width={1122}
-                                    height={1402}
-                                    onError={(e) => {
-                                        e.currentTarget.src = '/images/kiosk-fallback.svg';
-                                    }}
+                                    width={682}
+                                    height={1024}
+                                    decoding="async"
+                                    fetchPriority="high"
                                 />
-                            </div>
+                            </motion.div>
+
                             <motion.div
                                 aria-hidden="true"
-                                className="absolute z-20 top-6 start-0 sm:top-12 sm:-start-4 md:-start-12 flex flex-col justify-center rounded-md border border-gray-100 bg-white/90 px-3 py-2.5 sm:px-4 sm:py-3 backdrop-blur-md shadow-[0_12px_40px_rgb(0,0,0,0.06)]"
-                                initial={{ opacity: 0, y: 12 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.5, duration: 0.5 }}
+                                className="absolute z-20 top-[10%] -start-1 sm:-start-6 md:-start-10 rounded-2xl border border-white/80 bg-white/90 px-3 py-2.5 sm:px-4 sm:py-3 backdrop-blur-md shadow-[0_12px_40px_rgba(0,0,0,0.08)]"
+                                initial={{ opacity: 0, x: isAr ? 16 : -16 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.55, duration: 0.5 }}
                             >
-                                <p className="text-sm sm:text-base font-medium leading-none text-ink tracking-tight mb-1.5">
+                                <p className="text-sm sm:text-base font-semibold leading-none text-ink tracking-tight mb-1">
                                     {t.hero.badgeAccess}
                                 </p>
                                 <p className="text-[11px] sm:text-xs leading-none text-slate uppercase tracking-wider">
                                     {t.hero.badgeAccessSub}
                                 </p>
                             </motion.div>
+
                             <motion.div
                                 aria-hidden="true"
-                                className="absolute z-20 bottom-16 end-0 sm:bottom-24 sm:-end-2 md:-end-8 flex flex-col justify-center rounded-md border border-gray-100 bg-white/90 px-3 py-2.5 sm:px-4 sm:py-3 backdrop-blur-md shadow-[0_12px_40px_rgb(0,0,0,0.06)]"
-                                initial={{ opacity: 0, y: 12 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.65, duration: 0.5 }}
+                                className="absolute z-20 bottom-[18%] -end-1 sm:-end-5 md:-end-8 rounded-2xl border border-white/80 bg-white/90 px-3 py-2.5 sm:px-4 sm:py-3 backdrop-blur-md shadow-[0_12px_40px_rgba(0,0,0,0.08)]"
+                                initial={{ opacity: 0, x: isAr ? -16 : 16 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.7, duration: 0.5 }}
                             >
-                                <p className="text-sm sm:text-base font-medium leading-none text-ink tracking-tight mb-1.5">
+                                <p className="text-sm sm:text-base font-semibold leading-none text-ink tracking-tight mb-1">
                                     {t.hero.badgeSpeed}
                                 </p>
                                 <p className="text-[11px] sm:text-xs leading-none text-slate uppercase tracking-wider">

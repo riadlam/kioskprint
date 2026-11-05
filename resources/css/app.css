@@ -173,18 +173,25 @@ body.font-arabic p {
     filter: hue-rotate(118deg) saturate(1.12);
 }
 
-/* Subtle animated float used on hero accents */
+/* Subtle animated float used on hero accents / kiosk */
 @keyframes metbati-float {
     0%, 100% {
         transform: translateY(0);
     }
     50% {
-        transform: translateY(-8px);
+        transform: translateY(-10px);
     }
 }
 
 .animate-float {
     animation: metbati-float 6s ease-in-out infinite;
+    will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .animate-float {
+        animation: none;
+    }
 }
 
 @keyframes metbati-scanline {
