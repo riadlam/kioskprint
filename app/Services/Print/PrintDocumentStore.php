@@ -14,12 +14,17 @@ class PrintDocumentStore
 {
     public function __construct(private PageCounter $pages) {}
 
-    public function addFromPath(PrintJob $job, string $absolutePath, string $originalName, string $locale): void
-    {
+    public function addFromPath(
+        PrintJob $job,
+        string $absolutePath,
+        string $originalName,
+        string $locale,
+        ?string $mimeType = null,
+    ): void {
         $file = new UploadedFile(
             $absolutePath,
             $originalName,
-            'application/pdf',
+            $mimeType ?: 'application/pdf',
             \UPLOAD_ERR_OK,
             true,
         );

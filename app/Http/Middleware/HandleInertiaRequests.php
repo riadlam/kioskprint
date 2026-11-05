@@ -35,13 +35,24 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+
         return [
             ...parent::share($request),
             'appName' => config('app.name', 'Metbati'),
             'printSessionMinutes' => (int) config('print.session_minutes', 10),
+            'auth' => [
+                'user' => $user ? [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role' => $user->role,
+                ] : null,
+            ],
             'flash' => [
                 'payment_started' => $request->session()->get('payment_started'),
                 'payment_error' => $request->session()->get('payment_error'),
+                'success' => $request->session()->get('success'),
             ],
         ];
     }

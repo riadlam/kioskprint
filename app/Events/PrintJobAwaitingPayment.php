@@ -32,6 +32,7 @@ class PrintJobAwaitingPayment implements ShouldBroadcastNow
         return [
             'job_id' => $this->job->id,
             'kiosk_id' => $this->job->kiosk_id,
+            'title' => (string) ($this->job->title ?: ''),
             'required' => $required,
             'inserted' => 0,
             'remaining' => $required,
@@ -39,6 +40,7 @@ class PrintJobAwaitingPayment implements ShouldBroadcastNow
             'status' => $this->job->status,
             'page_count' => (int) $this->job->page_count,
             'amount' => $required,
+            'hold_seconds' => max(5, (int) config('print.coin_hold_seconds', 60)),
         ];
     }
 }

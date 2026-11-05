@@ -118,8 +118,10 @@ class KioskPrintRelay
                     'status' => 'printed',
                     'printed_pages' => (int) $job->page_count,
                 ]);
+                $fresh = $job->fresh();
+                app(PrintCodeStats::class)->markPrinted($fresh);
                 $this->rememberError($locked->kiosk_id, null);
-                $events[] = new PrintJobCompleted($job->fresh());
+                $events[] = new PrintJobCompleted($fresh);
                 $events[] = new KioskPcChanged($locked->kiosk_id, null);
                 $spool = 'print-spool/'.$job->id;
             }

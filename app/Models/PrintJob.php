@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
@@ -18,6 +19,8 @@ class PrintJob extends Model
     protected $fillable = [
         'locale',
         'kiosk_id',
+        'print_code_id',
+        'title',
         'print_manifest',
         'duplex',
         'status',
@@ -46,6 +49,11 @@ class PrintJob extends Model
             'amount_inserted' => 'decimal:2',
             'paid_at' => 'datetime',
         ];
+    }
+
+    public function printCode(): BelongsTo
+    {
+        return $this->belongsTo(PrintCode::class);
     }
 
     public function documents(): HasMany

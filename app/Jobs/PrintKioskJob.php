@@ -9,6 +9,7 @@ use App\Models\PrintJob;
 use App\Models\PrintPage;
 use App\Services\Print\KioskPrinter;
 use App\Services\Print\KioskPrintRelay;
+use App\Services\Print\PrintCodeStats;
 use App\Services\Print\PrintUnitComposer;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -79,7 +80,9 @@ class PrintKioskJob implements ShouldBeUnique, ShouldQueue
             }
 
             $job->update(['status' => 'printed', 'printed_pages' => $total]);
-            $this->broadcastSafely(new PrintJobCompleted($job->fresh()));
+            $fresh = $job->fresh();
+            app(PrintCodeStats::class)->markPrinted($fresh);
+            $this->broadcastSafely(new PrintJobCompleted($fresh));
         } catch (Throwable $exception) {
             $job->update(['status' => 'failed']);
             $this->broadcastSafely(new PrintJobFailed($job->fresh()));

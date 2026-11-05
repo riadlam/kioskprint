@@ -11,14 +11,14 @@
 
 use Illuminate\Support\Facades\Broadcast;
 
-Broadcast::channel('kiosk-pcs', function () {
-    if (request()->session()->get('admin_ok') !== true) {
+Broadcast::channel('kiosk-pcs', function ($user) {
+    if (! $user || ! $user->is_active || ! $user->isAdmin()) {
         return false;
     }
 
-    return ['id' => 'desk', 'name' => 'Desk'];
+    return ['id' => (string) $user->id, 'name' => $user->name];
 });
 
-Broadcast::channel('admin-kiosks', function () {
-    return request()->session()->get('admin_ok') === true;
+Broadcast::channel('admin-kiosks', function ($user) {
+    return $user && $user->is_active && $user->isAdmin();
 });

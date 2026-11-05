@@ -11,7 +11,9 @@ class AdminBroadcastController extends Controller
 {
     public function __invoke(Request $request): JsonResponse
     {
-        if ($request->session()->get('admin_ok') !== true) {
+        $user = $request->user();
+
+        if (! $user || ! $user->is_active || ! $user->isAdmin()) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
@@ -28,8 +30,8 @@ class AdminBroadcastController extends Controller
 
         try {
             $signed = $channel === 'presence-kiosk-pcs'
-                ? $this->pusher()->authorizePresenceChannel($channel, $data['socket_id'], 'desk', [
-                    'name' => 'Desk',
+                ? $this->pusher()->authorizePresenceChannel($channel, $data['socket_id'], (string) $user->id, [
+                    'name' => $user->name,
                 ])
                 : $this->pusher()->authorizeChannel($channel, $data['socket_id']);
         } catch (Throwable) {

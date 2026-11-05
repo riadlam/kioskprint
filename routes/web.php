@@ -3,6 +3,8 @@
 use App\Http\Controllers\AdminBroadcastController;
 use App\Http\Controllers\AdminCoinProbeController;
 use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\AdminPrintCodeController;
+use App\Http\Controllers\AdminProfessorController;
 use App\Http\Controllers\AppDownloadController;
 use App\Http\Controllers\AdminScreenController;
 use App\Http\Controllers\AdminStatusController;
@@ -10,6 +12,7 @@ use App\Http\Controllers\AdminTemplateController;
 use App\Http\Controllers\KioskBroadcastController;
 use App\Http\Controllers\KioskCoinController;
 use App\Http\Controllers\KioskDeskController;
+use App\Http\Controllers\KioskPrintCodeController;
 use App\Http\Controllers\KioskPrintUnitController;
 use App\Http\Controllers\KioskPrintStatusController;
 use App\Http\Controllers\KioskScreenController;
@@ -36,21 +39,34 @@ Route::post('/admin/logout', [AdminDashboardController::class, 'logout'])->name(
 Route::post('/admin/broadcasting/auth', AdminBroadcastController::class)->name('admin.broadcast');
 
 Route::middleware('admin')->group(function () {
-    Route::post('/admin/print-settings', [AdminDashboardController::class, 'updatePrintSettings'])->name('admin.print-settings');
-    Route::get('/admin/status', [AdminStatusController::class, 'show'])->name('admin.status');
-    Route::get('/admin/coins', [AdminCoinProbeController::class, 'show'])->name('admin.coins');
-    Route::post('/admin/coins/start', [AdminCoinProbeController::class, 'start'])->name('admin.coins.start');
-    Route::post('/admin/coins/stop', [AdminCoinProbeController::class, 'stop'])->name('admin.coins.stop');
-    Route::get('/admin/screen', [AdminScreenController::class, 'show'])->name('admin.screen');
-    Route::put('/admin/screen', [AdminScreenController::class, 'update'])->name('admin.screen.update');
-    Route::post('/admin/screen/videos', [AdminScreenController::class, 'store'])->name('admin.screen.videos.store');
-    Route::patch('/admin/screen/videos/{video}', [AdminScreenController::class, 'updateVideo'])->name('admin.screen.videos.update');
-    Route::post('/admin/screen/videos/{video}/move', [AdminScreenController::class, 'move'])->name('admin.screen.videos.move');
-    Route::delete('/admin/screen/videos/{video}', [AdminScreenController::class, 'destroy'])->name('admin.screen.videos.destroy');
-    Route::get('/admin/templates', [AdminTemplateController::class, 'show'])->name('admin.templates');
-    Route::post('/admin/templates', [AdminTemplateController::class, 'store'])->name('admin.templates.store');
-    Route::post('/admin/templates/{template}', [AdminTemplateController::class, 'update'])->name('admin.templates.update');
-    Route::delete('/admin/templates/{template}', [AdminTemplateController::class, 'destroy'])->name('admin.templates.destroy');
+    Route::get('/admin/print-codes', [AdminPrintCodeController::class, 'index'])->name('admin.print-codes.index');
+    Route::get('/admin/print-codes/create', [AdminPrintCodeController::class, 'create'])->name('admin.print-codes.create');
+    Route::post('/admin/print-codes', [AdminPrintCodeController::class, 'store'])->name('admin.print-codes.store');
+    Route::get('/admin/print-codes/{printCode}', [AdminPrintCodeController::class, 'show'])->name('admin.print-codes.show');
+    Route::get('/admin/print-codes/{printCode}/edit', [AdminPrintCodeController::class, 'edit'])->name('admin.print-codes.edit');
+    Route::post('/admin/print-codes/{printCode}', [AdminPrintCodeController::class, 'update'])->name('admin.print-codes.update');
+    Route::delete('/admin/print-codes/{printCode}', [AdminPrintCodeController::class, 'destroy'])->name('admin.print-codes.destroy');
+
+    Route::middleware('role:admin')->group(function () {
+        Route::post('/admin/print-settings', [AdminDashboardController::class, 'updatePrintSettings'])->name('admin.print-settings');
+        Route::get('/admin/status', [AdminStatusController::class, 'show'])->name('admin.status');
+        Route::get('/admin/coins', [AdminCoinProbeController::class, 'show'])->name('admin.coins');
+        Route::post('/admin/coins/start', [AdminCoinProbeController::class, 'start'])->name('admin.coins.start');
+        Route::post('/admin/coins/stop', [AdminCoinProbeController::class, 'stop'])->name('admin.coins.stop');
+        Route::get('/admin/screen', [AdminScreenController::class, 'show'])->name('admin.screen');
+        Route::put('/admin/screen', [AdminScreenController::class, 'update'])->name('admin.screen.update');
+        Route::post('/admin/screen/videos', [AdminScreenController::class, 'store'])->name('admin.screen.videos.store');
+        Route::patch('/admin/screen/videos/{video}', [AdminScreenController::class, 'updateVideo'])->name('admin.screen.videos.update');
+        Route::post('/admin/screen/videos/{video}/move', [AdminScreenController::class, 'move'])->name('admin.screen.videos.move');
+        Route::delete('/admin/screen/videos/{video}', [AdminScreenController::class, 'destroy'])->name('admin.screen.videos.destroy');
+        Route::get('/admin/templates', [AdminTemplateController::class, 'show'])->name('admin.templates');
+        Route::post('/admin/templates', [AdminTemplateController::class, 'store'])->name('admin.templates.store');
+        Route::post('/admin/templates/{template}', [AdminTemplateController::class, 'update'])->name('admin.templates.update');
+        Route::delete('/admin/templates/{template}', [AdminTemplateController::class, 'destroy'])->name('admin.templates.destroy');
+        Route::get('/admin/professors', [AdminProfessorController::class, 'index'])->name('admin.professors.index');
+        Route::post('/admin/professors', [AdminProfessorController::class, 'store'])->name('admin.professors.store');
+        Route::post('/admin/professors/{professor}', [AdminProfessorController::class, 'update'])->name('admin.professors.update');
+    });
 });
 
 Route::match(['GET', 'OPTIONS'], '/kiosk/templates', [KioskTemplateController::class, 'show'])->name('kiosk.templates');
@@ -73,6 +89,7 @@ Route::post('/kiosk/{kiosk}/coins', KioskCoinController::class)
     ->name('kiosk.coins.store');
 Route::post('/kiosk/{kiosk}/desk', [KioskDeskController::class, 'publish'])->name('kiosk.desk.publish');
 Route::post('/kiosk/{kiosk}/jobs/{job}/cancel', [KioskDeskController::class, 'cancel'])->name('kiosk.jobs.cancel');
+Route::post('/kiosk/{kiosk}/print-codes/redeem', [KioskPrintCodeController::class, 'redeem'])->name('kiosk.print-codes.redeem');
 
 Route::match(['GET', 'POST'], '/print/pay/satim/return', [PrintPaymentController::class, 'satimReturn'])
     ->name('print.satim.return');

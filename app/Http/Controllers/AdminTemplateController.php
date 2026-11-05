@@ -21,10 +21,11 @@ class AdminTemplateController extends Controller
         private PageCounter $pages,
     ) {}
 
-    public function show(): Response
+    public function show(Request $request): Response
     {
         return Inertia::render('Admin/Templates', [
-            'email' => (string) config('app.admin_email'),
+            'email' => (string) ($request->user()?->email ?? ''),
+            'role' => (string) ($request->user()?->role ?? 'admin'),
             'templatePrice' => (float) config('print.template_price_per_page'),
             'templates' => PrintTemplate::query()
                 ->orderBy('position')

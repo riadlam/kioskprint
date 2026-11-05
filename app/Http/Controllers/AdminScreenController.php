@@ -16,12 +16,13 @@ class AdminScreenController extends Controller
 {
     public function __construct(private KioskScreenCatalog $catalog) {}
 
-    public function show(): Response
+    public function show(Request $request): Response
     {
         $settings = $this->catalog->settings();
 
         return Inertia::render('Admin/Screen', [
-            'email' => (string) config('app.admin_email'),
+            'email' => (string) ($request->user()?->email ?? ''),
+            'role' => (string) ($request->user()?->role ?? 'admin'),
             'settings' => [
                 'enabled' => (bool) $settings->enabled,
                 'idle_seconds' => (int) $settings->idle_seconds,

@@ -13,12 +13,13 @@ class AdminCoinProbeController extends Controller
 {
     public function __construct(private CoinCreditService $credits) {}
 
-    public function show(): Response
+    public function show(Request $request): Response
     {
         $kioskId = (string) config('print.public_kiosk_id');
 
         return Inertia::render('Admin/Coins', [
-            'email' => (string) config('app.admin_email'),
+            'email' => (string) ($request->user()?->email ?? ''),
+            'role' => (string) ($request->user()?->role ?? 'admin'),
             'kiosk_id' => $kioskId,
             'probing' => $this->credits->isProbing($kioskId),
             'probe_until' => $this->credits->probeUntil($kioskId),

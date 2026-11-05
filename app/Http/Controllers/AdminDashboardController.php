@@ -4,8 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\PrintJob;
 use App\Models\PrintSetting;
+use App\Models\User;
+use App\Services\Admin\EnsureBootstrapAdmin;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -13,15 +16,24 @@ class AdminDashboardController extends Controller
 {
     public function show(Request $request): Response
     {
-        if (! $request->session()->get('admin_ok')) {
+        app(EnsureBootstrapAdmin::class)();
+
+        if (! $request->user()) {
             return Inertia::render('Admin/Dashboard', [
                 'authed' => false,
             ]);
         }
 
+        $user = $request->user();
+
+        if ($user->isProfessor()) {
+            return redirect()->route('admin.print-codes.index');
+        }
+
         return Inertia::render('Admin/Dashboard', [
             'authed' => true,
-            'email' => (string) config('app.admin_email'),
+            'email' => $user->email,
+            'role' => $user->role,
             'summary' => $this->summary(),
             'jobs' => $this->jobs(),
             'tonerSave' => PrintSetting::current()->toner_save,
@@ -43,33 +55,45 @@ class AdminDashboardController extends Controller
 
     public function login(Request $request): RedirectResponse
     {
-        $email = strtolower(trim((string) $request->input('email', '')));
-        $password = (string) $request->input('password', '');
-        $expectedEmail = strtolower(trim((string) config('app.admin_email')));
-        $expectedPassword = (string) config('app.admin_password');
+        app(EnsureBootstrapAdmin::class)();
 
-        $matches = $expectedEmail !== ''
-            && $expectedPassword !== ''
-            && strlen($email) === strlen($expectedEmail)
-            && strlen($password) === strlen($expectedPassword)
-            && hash_equals($expectedEmail, $email)
-            && hash_equals($expectedPassword, $password);
+        $data = $request->validate([
+            'email' => ['required', 'email'],
+            'password' => ['required', 'string'],
+        ]);
 
-        if (! $matches) {
+        $email = strtolower(trim($data['email']));
+
+        if (! Auth::attempt(['email' => $email, 'password' => $data['password']], false)) {
+            return back()->withErrors([
+                'email' => 'Those details do not match.',
+            ]);
+        }
+
+        $user = $request->user();
+
+        if (! $user || ! $user->is_active || ! in_array($user->role, [User::ROLE_ADMIN, User::ROLE_PROFESSOR], true)) {
+            Auth::logout();
+
             return back()->withErrors([
                 'email' => 'Those details do not match.',
             ]);
         }
 
         $request->session()->regenerate();
-        $request->session()->put('admin_ok', true);
+
+        if ($user->isProfessor()) {
+            return redirect()->route('admin.print-codes.index');
+        }
 
         return redirect()->route('admin');
     }
 
     public function logout(Request $request): RedirectResponse
     {
-        $request->session()->forget('admin_ok');
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
         return redirect()->route('admin');
     }
@@ -107,6 +131,7 @@ class AdminDashboardController extends Controller
                 'id' => $job->id,
                 'status' => $job->status,
                 'kiosk_id' => $job->kiosk_id,
+                'title' => $job->title,
                 'pages' => (int) $job->page_count,
                 'amount' => $job->amount !== null ? (float) $job->amount : null,
                 'currency' => $job->currency,
