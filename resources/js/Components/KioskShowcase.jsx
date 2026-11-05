@@ -3,7 +3,7 @@ import AnimateIn from './AnimateIn';
 import { ArrowRight, Check } from './Icons';
 import { useLandingLocale } from '../lib/LandingLocale';
 
-const kioskSrc = '/images/kiosk-real.jpg';
+const kioskSrc = '/images/kiosk-real.png';
 
 export default function KioskShowcase() {
     const { t, isAr } = useLandingLocale();
@@ -41,16 +41,12 @@ export default function KioskShowcase() {
                         className="absolute inset-0 -z-10 m-auto h-[65%] w-[75%] rounded-full bg-primary/10 blur-[90px]"
                     />
                     <div className="relative w-full max-w-[200px] sm:max-w-[240px] md:max-w-[280px]">
-                        <div
-                            aria-hidden="true"
-                            className="absolute inset-x-[10%] bottom-[2%] h-[10%] rounded-[100%] bg-ink/15 blur-xl"
-                        />
                         <motion.img
                             alt={t.showcase.alt}
                             src={kioskSrc}
-                            width={682}
-                            height={1024}
-                            className="relative z-10 w-full h-auto drop-shadow-[0_24px_48px_rgba(6,78,59,0.25)]"
+                            width={474}
+                            height={991}
+                            className="relative z-10 w-full h-auto drop-shadow-[0_16px_32px_rgba(6,78,59,0.2)]"
                             initial={{ opacity: 0, y: 20 }}
                             whileInView={{ opacity: 1, y: 0 }}
                             viewport={{ once: true, amount: 0.35 }}

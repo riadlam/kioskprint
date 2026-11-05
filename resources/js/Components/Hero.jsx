@@ -3,7 +3,7 @@ import AnimateIn from './AnimateIn';
 import { ArrowRight } from './Icons';
 import { useLandingLocale } from '../lib/LandingLocale';
 
-const kioskSrc = '/images/kiosk-real.jpg';
+const kioskSrc = '/images/kiosk-real.png';
 
 export default function Hero() {
     const { t, isAr } = useLandingLocale();
@@ -66,11 +66,7 @@ export default function Hero() {
                         >
                             <div
                                 aria-hidden="true"
-                                className="absolute inset-x-[8%] bottom-[4%] h-[12%] rounded-[100%] bg-ink/20 blur-2xl"
-                            />
-                            <div
-                                aria-hidden="true"
-                                className="absolute -inset-6 sm:-inset-10 rounded-[40%] bg-primary/15 blur-3xl"
+                                className="absolute -inset-6 sm:-inset-10 rounded-[40%] bg-primary/12 blur-3xl"
                             />
 
                             <motion.div
@@ -79,10 +75,10 @@ export default function Hero() {
                             >
                                 <img
                                     alt={t.hero.kioskAlt}
-                                    className="relative z-10 w-full h-auto select-none drop-shadow-[0_28px_50px_rgba(6,78,59,0.28)]"
+                                    className="relative z-10 w-full h-auto select-none drop-shadow-[0_18px_36px_rgba(6,78,59,0.22)]"
                                     src={kioskSrc}
-                                    width={682}
-                                    height={1024}
+                                    width={474}
+                                    height={991}
                                     decoding="async"
                                     fetchPriority="high"
                                 />
