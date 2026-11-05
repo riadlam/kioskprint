@@ -53,6 +53,7 @@ class HandleInertiaRequests extends Middleware
                 'payment_started' => $request->session()->get('payment_started'),
                 'payment_error' => $request->session()->get('payment_error'),
                 'success' => $request->session()->get('success'),
+                'shared_code' => $request->session()->get('shared_code'),
             ],
         ];
     }

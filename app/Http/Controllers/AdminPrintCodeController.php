@@ -31,18 +31,12 @@ class AdminPrintCodeController extends Controller
             'codes' => $codes,
             'email' => $user->email,
             'role' => $user->role,
-            'pricePerPage' => (float) config('print.price_per_page', 20),
         ]);
     }
 
-    public function create(Request $request): Response
+    public function create(): RedirectResponse
     {
-        return Inertia::render('Admin/PrintCodes/Form', [
-            'code' => null,
-            'email' => $request->user()->email,
-            'role' => $request->user()->role,
-            'pricePerPage' => (float) config('print.price_per_page', 20),
-        ]);
+        return redirect()->route('admin.print-codes.index');
     }
 
     public function store(Request $request, PageCounter $pages, PrintCodePinGenerator $pins): RedirectResponse
@@ -82,31 +76,25 @@ class AdminPrintCodeController extends Controller
         ]);
 
         return redirect()
-            ->route('admin.print-codes.show', $code)
-            ->with('success', 'تم إنشاء رمز الطباعة.');
+            ->route('admin.print-codes.index')
+            ->with('success', 'تم إنشاء رمز الطباعة.')
+            ->with('shared_code', $this->serialize($code));
     }
 
-    public function show(Request $request, PrintCode $printCode): Response
+    public function show(Request $request, PrintCode $printCode): RedirectResponse
     {
         $this->authorizeCode($request, $printCode);
 
-        return Inertia::render('Admin/PrintCodes/Show', [
-            'code' => $this->serialize($printCode),
-            'email' => $request->user()->email,
-            'role' => $request->user()->role,
-        ]);
+        return redirect()
+            ->route('admin.print-codes.index')
+            ->with('shared_code', $this->serialize($printCode));
     }
 
-    public function edit(Request $request, PrintCode $printCode): Response
+    public function edit(Request $request, PrintCode $printCode): RedirectResponse
     {
         $this->authorizeCode($request, $printCode);
 
-        return Inertia::render('Admin/PrintCodes/Form', [
-            'code' => $this->serialize($printCode),
-            'email' => $request->user()->email,
-            'role' => $request->user()->role,
-            'pricePerPage' => (float) config('print.price_per_page', 20),
-        ]);
+        return redirect()->route('admin.print-codes.index');
     }
 
     public function update(Request $request, PrintCode $printCode, PageCounter $pages): RedirectResponse
@@ -155,8 +143,9 @@ class AdminPrintCodeController extends Controller
         $printCode->save();
 
         return redirect()
-            ->route('admin.print-codes.show', $printCode)
-            ->with('success', 'تم تحديث مهمة الطباعة.');
+            ->route('admin.print-codes.index')
+            ->with('success', 'تم تحديث المستند.')
+            ->with('shared_code', $this->serialize($printCode->fresh()));
     }
 
     public function destroy(Request $request, PrintCode $printCode): RedirectResponse
