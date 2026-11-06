@@ -122,6 +122,7 @@ class KioskPrintRelay
                 ]);
                 $fresh = $job->fresh();
                 app(PrintCodeStats::class)->markPrinted($fresh);
+                app(\App\Services\Telegram\OrderNotifier::class)->complete($fresh);
                 $this->rememberError($locked->kiosk_id, null);
                 $events[] = new PrintJobCompleted($fresh);
                 $events[] = new KioskPcChanged($locked->kiosk_id, null);

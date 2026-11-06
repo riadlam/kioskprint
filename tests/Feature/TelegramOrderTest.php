@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\PrintJob;
 use App\Models\PrintSetting;
 use App\Services\Print\KioskDeskCodes;
+use App\Services\Print\PaperTray;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
@@ -29,6 +30,7 @@ class TelegramOrderTest extends TestCase
             'telegram_chat_id' => '1001',
         ]);
         app(KioskDeskCodes::class)->publish('kiosk-metbati-01', '246');
+        app(PaperTray::class)->add(200);
 
         Http::fake([
             'api.telegram.org/*' => Http::response([
@@ -83,6 +85,7 @@ class TelegramOrderTest extends TestCase
         $this->assertStringContainsString('💰 Total: 20 DA', $done);
         $this->assertStringContainsString('💵 Paid: 50 DA', $done);
         $this->assertStringContainsString('🎁 Extra: 30 DA', $done);
+        $this->assertStringContainsString('🟢 200 sheets left in the tray', $done);
         $this->assertSame(42, $job->fresh()->telegram_message_id);
     }
 

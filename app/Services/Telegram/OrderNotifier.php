@@ -11,7 +11,10 @@ use Throwable;
 
 class OrderNotifier
 {
-    public function __construct(private PrintPricing $pricing) {}
+    public function __construct(
+        private PrintPricing $pricing,
+        private PaperTray $tray,
+    ) {}
 
     public function pinCode(): void
     {
@@ -84,6 +87,8 @@ class OrderNotifier
         $charged = round((float) $job->amount, 2);
         $paid = round((float) $job->amount_inserted, 2);
         $extra = round(max(0, $paid - $charged), 2);
+        $left = (int) $this->tray->report()['left'];
+        $mark = $left < PaperTray::LOW_AT ? '🔴' : '🟢';
 
         $this->edit($job, $this->card(
             '🎉 Paid',
@@ -95,6 +100,7 @@ class OrderNotifier
                 [
                     '💵 Paid: '.$this->pricing->format($paid),
                     '🎁 Extra: '.$this->pricing->format($extra),
+                    $mark.' '.$this->sheets($left).' left in the tray',
                 ],
             ),
         ));
