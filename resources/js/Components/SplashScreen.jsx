@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { KioskMark } from './Logo';
 import { useLandingLocale } from '../lib/LandingLocale';
-import { BRAND_AR, BRAND_EN } from '../lib/landingCopy';
+import { BRAND_EN } from '../lib/landingCopy';
 
 export default function SplashScreen() {
     const { isAr } = useLandingLocale();
@@ -13,9 +13,8 @@ export default function SplashScreen() {
         return () => clearTimeout(t);
     }, []);
 
-    const brand = isAr ? BRAND_AR : BRAND_EN;
-    const letters = Array.from(brand);
-    const accentFrom = isAr ? Math.ceil(letters.length / 2) : 3;
+    const letters = Array.from(BRAND_EN);
+    const accentFrom = 3;
 
     return (
         <AnimatePresence>
@@ -34,21 +33,23 @@ export default function SplashScreen() {
                         >
                             <KioskMark size={88} />
                         </motion.div>
-                        <div className="flex" dir={isAr ? 'rtl' : 'ltr'}>
-                            {letters.map((char, i) => (
-                                <motion.span
-                                    key={`${char}-${i}`}
-                                    className={`inline-block font-extrabold text-3xl sm:text-4xl md:text-5xl tracking-tight ${
-                                        i >= accentFrom ? 'text-primary' : 'text-ink'
-                                    }`}
-                                    initial={{ opacity: 0, y: 40, scale: 0.8 }}
-                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    transition={{ delay: 0.3 + i * 0.05, duration: 0.4 }}
-                                >
-                                    {char}
-                                </motion.span>
-                            ))}
-                        </div>
+                        {!isAr && (
+                            <div className="flex" dir="ltr">
+                                {letters.map((char, i) => (
+                                    <motion.span
+                                        key={`${char}-${i}`}
+                                        className={`inline-block font-extrabold text-3xl sm:text-4xl md:text-5xl tracking-tight ${
+                                            i >= accentFrom ? 'text-primary' : 'text-ink'
+                                        }`}
+                                        initial={{ opacity: 0, y: 40, scale: 0.8 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        transition={{ delay: 0.3 + i * 0.05, duration: 0.4 }}
+                                    >
+                                        {char}
+                                    </motion.span>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </motion.div>
             )}

@@ -11,7 +11,7 @@ export default function Hero() {
     return (
         <section
             id="home"
-            className="relative overflow-hidden bg-[#F6F4F0] border-b border-gray-200"
+            className="relative h-[100svh] overflow-hidden bg-[#F6F4F0] border-b border-gray-200"
         >
             <div
                 className="absolute top-[18%] end-[-10%] w-[min(720px,95vw)] h-[min(720px,95vw)] rounded-full bg-primary/10 blur-[110px] pointer-events-none"
@@ -22,41 +22,41 @@ export default function Hero() {
                 aria-hidden="true"
             />
 
-            <div className="relative section-padding w-full pt-[88px] pb-8 sm:pt-[96px] sm:pb-10 md:pb-14">
-                <div className="grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr] gap-8 lg:gap-6 items-center">
-                    <div className="max-w-3xl mx-auto lg:mx-0 text-center lg:text-start w-full order-2 lg:order-1">
+            <div className="relative section-padding flex h-full min-h-0 flex-col pt-[72px] pb-4 sm:pt-[80px] sm:pb-6">
+                <div className="grid h-full min-h-0 grid-cols-1 items-center gap-3 lg:grid-cols-[1.15fr_0.85fr] lg:gap-8">
+                    <div className="mx-auto w-full max-w-xl text-center lg:mx-0 lg:text-start order-2 lg:order-1">
                         <AnimateIn>
-                            <p className="inline-flex items-center gap-2 text-sm sm:text-base font-semibold uppercase tracking-widest text-primary mb-4 sm:mb-5">
-                                <span className="h-2 w-2 bg-primary rounded-full shrink-0" />
+                            <p className="mb-2 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-primary sm:mb-3 sm:text-sm">
+                                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
                                 <span className="text-start">{t.hero.eyebrow}</span>
                             </p>
                         </AnimateIn>
                         <AnimateIn delay={0.05}>
-                            <h1 className="font-extrabold text-[2.65rem] leading-[1.08] tracking-tight text-ink sm:text-6xl lg:text-7xl xl:text-[5.25rem]">
+                            <h1 className="font-extrabold leading-[1.12] tracking-tight text-ink text-[1.7rem] sm:text-[2.15rem] lg:text-[2.75rem] xl:text-[3.15rem]">
                                 {t.hero.titleLine1}
                                 <span className="mt-1 block text-primary">{t.hero.titleLine2}</span>
                             </h1>
                         </AnimateIn>
                         <AnimateIn delay={0.1}>
-                            <p className="mt-5 sm:mt-6 mb-7 sm:mb-8 max-w-xl mx-auto lg:mx-0 text-lg sm:text-2xl leading-snug text-slate">
+                            <p className="mx-auto mb-4 mt-3 max-w-md text-[15px] leading-snug text-slate sm:text-lg lg:mx-0">
                                 {t.hero.body}
                             </p>
                         </AnimateIn>
                         <AnimateIn delay={0.15}>
-                            <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 justify-center lg:justify-start">
-                                <a className="btn-primary w-full sm:w-auto" href="#partner">
+                            <div className="flex flex-col justify-center gap-2 sm:flex-row sm:flex-wrap sm:gap-3 lg:justify-start">
+                                <a className="btn-primary w-full !px-5 !py-2.5 !text-base sm:w-auto" href="#partner">
                                     {t.hero.partner} <ArrowRight className={isAr ? 'rotate-180' : ''} />
                                 </a>
-                                <a className="btn-secondary w-full sm:w-auto" href="#print" id="print">
+                                <a className="btn-secondary w-full !px-5 !py-2.5 !text-base sm:w-auto" href="#print" id="print">
                                     {t.hero.printNow}
                                 </a>
                             </div>
                         </AnimateIn>
                     </div>
 
-                    <div className="relative flex justify-center lg:justify-end order-1 lg:order-2 px-1 sm:px-0">
+                    <div className="relative flex h-[30svh] min-h-0 items-center justify-center order-1 lg:order-2 lg:h-full lg:justify-end">
                         <motion.div
-                            className="relative w-full max-w-[240px] sm:max-w-[300px] lg:max-w-[380px]"
+                            className="relative h-full max-h-[30svh] w-auto lg:max-h-[min(70svh,560px)]"
                             initial={{ opacity: 0, y: 28, scale: 0.96 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             transition={{ duration: 0.85, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
@@ -72,7 +72,7 @@ export default function Hero() {
                             >
                                 <img
                                     alt={t.hero.kioskAlt}
-                                    className="relative z-10 w-full h-auto select-none drop-shadow-[0_18px_36px_rgba(6,78,59,0.22)]"
+                                    className="relative z-10 h-[30svh] w-auto max-w-[70vw] object-contain select-none drop-shadow-[0_18px_36px_rgba(6,78,59,0.22)] lg:h-[min(68svh,520px)]"
                                     src={kioskSrc}
                                     width={474}
                                     height={991}

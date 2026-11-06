@@ -33,10 +33,10 @@ export default function Vision() {
                 <AnimateIn direction="right" className="flex flex-col items-center">
                     <img
                         alt={t.vision.alt}
-                        src="/images/algeria-vision.png"
+                        src="/images/algeria-vision.png?v=2"
                         width={1024}
                         height={681}
-                        className="w-full max-w-2xl h-auto rounded-[28px] bg-white shadow-[0_24px_60px_rgba(6,78,59,0.14)]"
+                        className="w-full max-w-2xl h-auto"
                         onError={(e) => {
                             e.currentTarget.src = '/images/vision-fallback.svg';
                         }}
