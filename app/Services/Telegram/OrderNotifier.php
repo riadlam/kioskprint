@@ -4,6 +4,7 @@ namespace App\Services\Telegram;
 
 use App\Models\PrintJob;
 use App\Models\PrintSetting;
+use App\Services\Print\PaperTray;
 use App\Services\Print\PrintPricing;
 use Illuminate\Support\Facades\Http;
 use Throwable;
@@ -101,7 +102,68 @@ class OrderNotifier
 
     public function welcome(string $chatId): void
     {
-        $this->sendTo($chatId, "👋 Metbati is connected.\nNew orders will update in this chat.");
+        $this->sendTo($chatId, "👋 Metbati is connected.\nNew orders will update in this chat.\n📄 /add 200 loads paper. /left shows the tray.");
+    }
+
+    /**
+     * @param  array<string, mixed>  $tray
+     */
+    public function paperAdded(int $added, array $tray): void
+    {
+        $this->send(implode("\n", [
+            '📦 Paper loaded',
+            '',
+            '➕ Added '.$added.' sheets',
+            '📄 Tray now has '.$tray['left'].' sheets',
+            '🕐 This stack\'s clock just started',
+            '',
+            'I will shout when fewer than 5 sheets are left.',
+        ]));
+    }
+
+    /**
+     * @param  array<string, mixed>  $tray
+     */
+    public function paperLeft(array $tray): void
+    {
+        if (! $tray['filled_at']) {
+            $this->send("📭 No paper counted yet.\nLoad the tray, then send /add 200.");
+
+            return;
+        }
+
+        $mark = ((int) $tray['left']) < PaperTray::LOW_AT ? '🔴' : '🟢';
+
+        $this->send(implode("\n", [
+            '📄 Paper tray',
+            '',
+            $mark.' '.$this->sheets((int) $tray['left']).' left',
+            '📦 This stack started with '.$this->sheets((int) $tray['filled_sheets']),
+            '🔥 Used '.$this->sheets((int) $tray['used']).' across '.$this->jobs((int) $tray['jobs']),
+            '⏳ Running for '.$tray['lasted'],
+        ]));
+    }
+
+    /**
+     * @param  array<string, mixed>  $tray
+     */
+    public function paperLow(array $tray): void
+    {
+        $this->send(implode("\n", [
+            '📉 Time to refill',
+            '',
+            '📦 This stack started with '.$this->sheets((int) $tray['filled_sheets']),
+            '🔥 Used '.$this->sheets((int) $tray['used']).' across '.$this->jobs((int) $tray['jobs']),
+            '⏳ It lasted '.$tray['lasted'],
+            '📄 '.$this->sheets((int) $tray['left']).' left in the tray',
+            '',
+            '🙏 Put paper in, then send /add 200.',
+        ]));
+    }
+
+    public function paperHint(): void
+    {
+        $this->send("🤔 Send /add 200\nThat number is how many sheets you just put in. Up to 5000 at a time.");
     }
 
     private function pinBody(PrintJob $job): string
@@ -216,6 +278,16 @@ class OrderNotifier
 
             return [];
         }
+    }
+
+    private function sheets(int $count): string
+    {
+        return $count.' '.($count === 1 ? 'sheet' : 'sheets');
+    }
+
+    private function jobs(int $count): string
+    {
+        return $count.' '.($count === 1 ? 'job' : 'jobs');
     }
 
     private function token(): string

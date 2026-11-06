@@ -65,17 +65,17 @@ class KioskPrintRelay
             $locked = KioskPrintUnit::query()->whereKey($unit->id)->lockForUpdate()->first();
 
             if (! $locked || $locked->kiosk_id !== $kioskId) {
-                return ['status' => 'missing', 'events' => []];
+                return ['status' => 'missing', 'events' => [], 'paper_alert' => null];
             }
 
             if ($locked->state !== 'pending') {
-                return ['status' => $locked->state, 'events' => []];
+                return ['status' => $locked->state, 'events' => [], 'paper_alert' => null];
             }
 
             $job = PrintJob::query()->whereKey($locked->print_job_id)->lockForUpdate()->first();
 
             if (! $job) {
-                return ['status' => 'missing', 'events' => []];
+                return ['status' => 'missing', 'events' => [], 'paper_alert' => null];
             }
 
             if (! $ok) {
@@ -95,10 +95,12 @@ class KioskPrintRelay
                         new KioskPcChanged($locked->kiosk_id, $message),
                     ],
                     'spool' => 'print-spool/'.$job->id,
+                    'paper_alert' => null,
                 ];
             }
 
             $locked->update(['state' => 'printed', 'error' => null]);
+            $paperAlert = app(PaperTray::class)->consume($job, 1);
             $printed = (int) KioskPrintUnit::query()
                 ->where('print_job_id', $job->id)
                 ->where('state', 'printed')
@@ -126,7 +128,7 @@ class KioskPrintRelay
                 $spool = 'print-spool/'.$job->id;
             }
 
-            return ['status' => 'printed', 'events' => $events, 'spool' => $spool];
+            return ['status' => 'printed', 'events' => $events, 'spool' => $spool, 'paper_alert' => $paperAlert];
         });
 
         if (($result['status'] ?? '') === 'missing') {
@@ -139,6 +141,10 @@ class KioskPrintRelay
 
         if (! empty($result['spool'])) {
             Storage::disk('local')->deleteDirectory($result['spool']);
+        }
+
+        if (is_array($result['paper_alert'] ?? null)) {
+            app(\App\Services\Telegram\OrderNotifier::class)->paperLow($result['paper_alert']);
         }
 
         return ['status' => $result['status']];
