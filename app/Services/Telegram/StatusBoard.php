@@ -41,7 +41,7 @@ class StatusBoard
         ];
 
         $down = collect($rows)->where('state', 'down')->count();
-        $stamp = now()->timezone(config('app.timezone'))->format('H:i');
+        $stamp = now()->timezone('Africa/Algiers')->format('H:i');
         $banner = $down > 0
             ? "🚨 <b>{$down} thing".($down === 1 ? '' : 's')." need you</b>"
             : '✨ <b>All the lights are on</b>';
