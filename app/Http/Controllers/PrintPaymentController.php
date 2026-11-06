@@ -13,6 +13,7 @@ use App\Services\Print\CoinCreditService;
 use App\Http\Requests\StorePrintFilesRequest;
 use App\Services\Print\PrintDocumentStore;
 use App\Services\Print\PrintJobSession;
+use App\Services\Print\PrintPriceList;
 use App\Services\Print\PrintPricing;
 use App\Services\SofizPay\SofizPayClient;
 use App\Services\Telegram\OrderNotifier;
@@ -31,6 +32,7 @@ class PrintPaymentController extends Controller
     public function __construct(
         private PrintJobSession $session,
         private PrintPricing $pricing,
+        private PrintPriceList $prices,
         private PrintDocumentStore $documents,
         private CoinCreditService $credits,
         private OrderNotifier $telegram,
@@ -69,6 +71,13 @@ class PrintPaymentController extends Controller
         }
 
         $job->update($updates);
+        $job->refresh();
+
+        if ($this->prices->tooMany($job)) {
+            return back()->withErrors([
+                'pages' => $this->prices->refusal($job),
+            ]);
+        }
 
         return redirect()->route('print.pay', $job);
     }
@@ -133,6 +142,12 @@ class PrintPaymentController extends Controller
 
         if ($quote['page_count'] < 1) {
             return redirect()->route('print.review', $job);
+        }
+
+        if ($this->prices->tooMany($job)) {
+            return redirect()->route('print.review', $job)->withErrors([
+                'pages' => $this->prices->refusal($job),
+            ]);
         }
 
         if ($job->status === 'reviewing' && ! $job->payment_method) {
@@ -207,6 +222,10 @@ class PrintPaymentController extends Controller
                 return 'mismatch';
             }
 
+            if ($this->prices->tooMany($locked)) {
+                return 'too_many';
+            }
+
             $emulatePoste = $data['payment_method'] === 'algerie_poste'
                 && config('print.emulate_poste_paid');
             $satim = $data['payment_method'] === 'algerie_poste' && ! $emulatePoste;
@@ -261,6 +280,7 @@ class PrintPaymentController extends Controller
             $locked->fill([
                 'status' => $emulatePoste ? 'paid' : 'awaiting_payment',
                 'page_count' => $quote['page_count'],
+                'unit_price' => $locked->unit_price ?? $quote['unit_price'],
                 'amount' => $quote['amount'],
                 'amount_inserted' => $emulatePoste ? $quote['amount'] : 0,
                 'currency' => $quote['currency'],
@@ -271,6 +291,12 @@ class PrintPaymentController extends Controller
 
             return $satim ? 'satim' : ($emulatePoste ? 'print' : 'awaiting');
         });
+
+        if ($result === 'too_many') {
+            return redirect()->route('print.review', $job)->withErrors([
+                'pages' => $this->prices->refusal($job),
+            ]);
+        }
 
         if ($result === 'below_minimum') {
             return back()->withErrors([

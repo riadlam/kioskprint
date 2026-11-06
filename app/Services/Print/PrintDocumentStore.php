@@ -12,7 +12,10 @@ use Throwable;
 
 class PrintDocumentStore
 {
-    public function __construct(private PageCounter $pages) {}
+    public function __construct(
+        private PageCounter $pages,
+        private PrintPriceList $prices,
+    ) {}
 
     public function addFromPath(
         PrintJob $job,
@@ -57,6 +60,18 @@ class PrintDocumentStore
                     "files.{$index}" => $locale === 'ar'
                         ? 'تعذر قراءة «'.$file->getClientOriginalName().'». أزل كلمة السر أو اختر ملفاً آخر.'
                         : 'Impossible de lire «'.$file->getClientOriginalName().'». Retirez le mot de passe ou choisissez un autre fichier.',
+                ]);
+            }
+        }
+
+        if ($this->prices->usesBands($job)) {
+            $already = (int) $job->pages()->count();
+            $incoming = array_sum(array_column($counted, 'pages'));
+            $max = $this->prices->maxPages();
+
+            if ($already + $incoming > $max) {
+                throw ValidationException::withMessages([
+                    'files' => $this->prices->refusal($job),
                 ]);
             }
         }

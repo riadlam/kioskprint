@@ -6,12 +6,14 @@ use App\Models\PrintJob;
 
 class PrintPricing
 {
+    public function __construct(private PrintPriceList $prices) {}
+
     public function quote(PrintJob $job): array
     {
-        $pages = (int) $job->pages()->sum('copies');
+        $pages = $this->prices->pagesOf($job);
         $unit = $job->unit_price !== null
             ? (float) $job->unit_price
-            : (float) config('print.price_per_page');
+            : (float) ($this->prices->priceFor($pages) ?? config('print.price_per_page'));
         $currency = (string) config('print.currency', 'DA');
         $amount = round($pages * $unit, 2);
 

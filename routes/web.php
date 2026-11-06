@@ -52,6 +52,7 @@ Route::middleware('admin')->group(function () {
 
     Route::middleware('role:admin')->group(function () {
         Route::post('/admin/print-settings', [AdminDashboardController::class, 'updatePrintSettings'])->name('admin.print-settings');
+        Route::post('/admin/price-bands', [AdminDashboardController::class, 'updatePriceBands'])->name('admin.price-bands');
         Route::get('/admin/status', [AdminStatusController::class, 'show'])->name('admin.status');
         Route::get('/admin/coins', [AdminCoinProbeController::class, 'show'])->name('admin.coins');
         Route::post('/admin/coins/start', [AdminCoinProbeController::class, 'start'])->name('admin.coins.start');

@@ -18,7 +18,7 @@ function money(amount) {
     return new Intl.NumberFormat('fr-DZ', { maximumFractionDigits: 0 }).format(amount || 0);
 }
 
-export default function Dashboard({ authed, email = '', summary = {}, jobs = [], tonerSave = false }) {
+export default function Dashboard({ authed, email = '', summary = {}, jobs = [], tonerSave = false, priceBands = [] }) {
     if (!authed) {
         return <Login />;
     }
@@ -38,6 +38,7 @@ export default function Dashboard({ authed, email = '', summary = {}, jobs = [],
                         </section>
 
                         <TonerSaver enabled={tonerSave} />
+                        <PriceBands bands={priceBands} />
 
                         <Link href="/admin/status" className="mt-6 flex items-center justify-between gap-4 rounded-xl border border-black/5 bg-[#101513] px-5 py-4 text-white shadow-sm">
                             <span>
@@ -129,6 +130,91 @@ function TonerSaver({ enabled }) {
                 <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition ${enabled ? 'start-6' : 'start-1'}`} />
             </button>
         </section>
+    );
+}
+
+function PriceBands({ bands }) {
+    const form = useForm({
+        bands: bands.map((band) => ({
+            id: band.id,
+            min_pages: band.min_pages,
+            max_pages: band.max_pages,
+            price_per_page: band.price_per_page,
+        })),
+    });
+    const errors = usePage().props.errors || {};
+
+    function save(event) {
+        event.preventDefault();
+        form.post('/admin/price-bands', { preserveScroll: true });
+    }
+
+    if (form.data.bands.length === 0) {
+        return null;
+    }
+
+    return (
+        <form onSubmit={save} className="mt-6 rounded-xl border border-black/5 bg-white px-5 py-4 shadow-sm">
+            <div className="flex items-end justify-between gap-4">
+                <div>
+                    <h2 className="text-[15px] font-semibold">Page prices</h2>
+                    <p className="mt-0.5 max-w-xl text-[13px] text-slate">Dinars per page for a customer’s own files. Ranges must start at page 1 and touch, with no gaps. The last page is the maximum one order can hold. Ready-made forms stay at their own price.</p>
+                </div>
+                <button
+                    type="submit"
+                    disabled={form.processing}
+                    className="h-9 shrink-0 rounded-lg bg-emerald-700 px-3 text-[13px] font-semibold text-white disabled:opacity-60"
+                >
+                    Save prices
+                </button>
+            </div>
+            {errors.bands && (
+                <p className="mt-3 text-[13px] font-medium text-red-700">{errors.bands}</p>
+            )}
+            <div className="mt-4 grid gap-3">
+                {form.data.bands.map((band, index) => (
+                    <div key={band.id} className="grid grid-cols-3 gap-2">
+                        <label className="text-[12px] font-medium text-slate">
+                            From page
+                            <input
+                                type="number"
+                                min="1"
+                                value={band.min_pages}
+                                onChange={(event) => form.setData('bands', form.data.bands.map((row, rowIndex) => (
+                                    rowIndex === index ? { ...row, min_pages: Number(event.target.value) } : row
+                                )))}
+                                className="mt-1 h-10 w-full rounded-lg border border-black/10 px-3 text-[14px] text-black"
+                            />
+                        </label>
+                        <label className="text-[12px] font-medium text-slate">
+                            To page
+                            <input
+                                type="number"
+                                min="1"
+                                value={band.max_pages}
+                                onChange={(event) => form.setData('bands', form.data.bands.map((row, rowIndex) => (
+                                    rowIndex === index ? { ...row, max_pages: Number(event.target.value) } : row
+                                )))}
+                                className="mt-1 h-10 w-full rounded-lg border border-black/10 px-3 text-[14px] text-black"
+                            />
+                        </label>
+                        <label className="text-[12px] font-medium text-slate">
+                            DA / page
+                            <input
+                                type="number"
+                                min="1"
+                                step="1"
+                                value={band.price_per_page}
+                                onChange={(event) => form.setData('bands', form.data.bands.map((row, rowIndex) => (
+                                    rowIndex === index ? { ...row, price_per_page: event.target.value } : row
+                                )))}
+                                className="mt-1 h-10 w-full rounded-lg border border-black/10 px-3 text-[14px] text-black"
+                            />
+                        </label>
+                    </div>
+                ))}
+            </div>
+        </form>
     );
 }
 

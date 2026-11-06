@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\PrintJob;
 use App\Models\PrintSetting;
 use App\Models\User;
+use App\Services\Print\PrintPriceList;
 use App\Services\Admin\EnsureBootstrapAdmin;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -37,6 +38,12 @@ class AdminDashboardController extends Controller
             'summary' => $this->summary(),
             'jobs' => $this->jobs(),
             'tonerSave' => PrintSetting::current()->toner_save,
+            'priceBands' => app(PrintPriceList::class)->bands()->map(fn ($band) => [
+                'id' => $band->id,
+                'min_pages' => $band->min_pages,
+                'max_pages' => $band->max_pages,
+                'price_per_page' => (float) $band->price_per_page,
+            ])->values(),
         ]);
     }
 
@@ -49,6 +56,21 @@ class AdminDashboardController extends Controller
         PrintSetting::current()->update([
             'toner_save' => (bool) $data['toner_save'],
         ]);
+
+        return back();
+    }
+
+    public function updatePriceBands(Request $request, PrintPriceList $prices): RedirectResponse
+    {
+        $data = $request->validate([
+            'bands' => ['required', 'array', 'min:1'],
+            'bands.*.id' => ['required', 'integer'],
+            'bands.*.min_pages' => ['required', 'integer', 'min:1', 'max:10000'],
+            'bands.*.max_pages' => ['required', 'integer', 'min:1', 'max:10000'],
+            'bands.*.price_per_page' => ['required', 'numeric', 'min:1', 'max:10000'],
+        ]);
+
+        $prices->replace($data['bands']);
 
         return back();
     }

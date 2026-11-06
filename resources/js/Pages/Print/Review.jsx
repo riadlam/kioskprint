@@ -1,4 +1,4 @@
-import { Head, router, useForm } from '@inertiajs/react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import AccessSheet from '../../Components/Print/AccessSheet';
 import PageThumb from '../../Components/Print/PageThumb';
@@ -36,6 +36,7 @@ function withIndex(list) {
 }
 
 export default function Review({ job, limits, templates = [], templatePrice = 50 }) {
+    const pageErrors = usePage().props.errors || {};
     const fileInputRef = useRef(null);
     const autoPickRef = useRef(false);
     const pagesRef = useRef([]);
@@ -218,7 +219,9 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
     }
 
     function goToPay() {
-        if (pages.length < 1 || checkingOut || form.processing) {
+        const maxPages = Number(limits.max_pages) || 100;
+        const chosen = pagesRef.current.reduce((sum, page) => sum + (Number(page.copies) || 1), 0);
+        if (pages.length < 1 || checkingOut || form.processing || chosen > maxPages) {
             return;
         }
 
@@ -281,6 +284,8 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
     }
 
     const sheetCount = pages.reduce((sum, page) => sum + (Number(page.copies) || 1), 0);
+    const maxPages = Number(limits.max_pages) || 100;
+    const overCap = sheetCount > maxPages;
     const maxCopies = Math.max(1, Number(limits.max_copies) || 10);
 
     const fileCount = serverBacked
@@ -357,12 +362,17 @@ export default function Review({ job, limits, templates = [], templatePrice = 50
                         </button>
                     </div>
 
+                    {(overCap || pageErrors.pages) && (
+                        <p className="mb-2 text-center text-[12px] font-semibold text-red-700">
+                            {pageErrors.pages || t.tooManyPages(maxPages)}
+                        </p>
+                    )}
                     <button
                         type="button"
                         onClick={goToPay}
-                        disabled={pages.length < 1 || screenBusy}
+                        disabled={pages.length < 1 || screenBusy || overCap}
                         className={`flex h-11 w-full items-center justify-center text-[13px] font-semibold text-white disabled:pointer-events-none ${
-                            pages.length > 0 ? 'bg-primary' : 'bg-emerald-100 text-emerald-400'
+                            pages.length > 0 && !overCap ? 'bg-primary' : 'bg-emerald-100 text-emerald-400'
                         }`}
                     >
                         {t.payCta}

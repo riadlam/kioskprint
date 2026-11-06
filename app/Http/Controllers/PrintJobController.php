@@ -143,6 +143,7 @@ class PrintJobController extends Controller
                 'max_files' => (int) config('print.max_files'),
                 'max_kilobytes' => (int) config('print.max_kilobytes'),
                 'max_copies' => (int) config('print.max_copies', 10),
+                'max_pages' => app(\App\Services\Print\PrintPriceList::class)->maxPages(),
             ],
             'templates' => $this->templates->forClient(),
             'templatePrice' => (float) config('print.template_price_per_page'),
