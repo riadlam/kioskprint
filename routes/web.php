@@ -12,6 +12,7 @@ use App\Http\Controllers\AdminTemplateController;
 use App\Http\Controllers\KioskBroadcastController;
 use App\Http\Controllers\KioskCoinController;
 use App\Http\Controllers\KioskDeskController;
+use App\Http\Controllers\KioskHealthController;
 use App\Http\Controllers\KioskPrintCodeController;
 use App\Http\Controllers\KioskPrintUnitController;
 use App\Http\Controllers\KioskPrintStatusController;
@@ -23,6 +24,7 @@ use App\Http\Controllers\PrintJobController;
 use App\Http\Controllers\PrintPageController;
 use App\Http\Controllers\PrintPaymentController;
 use App\Http\Controllers\PrintTemplateController;
+use App\Http\Controllers\TelegramStatusController;
 use App\Http\Controllers\TelegramWebhookController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -75,6 +77,7 @@ Route::match(['GET', 'OPTIONS'], '/kiosk/screen', [KioskScreenController::class,
 Route::match(['GET', 'OPTIONS'], '/kiosk/screen/videos/{video}', [KioskScreenController::class, 'video'])->name('kiosk.screen.video');
 
 Route::post('/telegram/webhook/{secret}', TelegramWebhookController::class)->name('telegram.webhook');
+Route::post('/telegram/status/{secret}', TelegramStatusController::class)->name('telegram.status');
 
 Route::post('/kiosk/broadcasting/auth', KioskBroadcastController::class)->name('kiosk.broadcast');
 Route::post('/kiosk/{kiosk}/ready', [KioskPrintUnitController::class, 'ready'])->name('kiosk.ready');
@@ -88,6 +91,7 @@ Route::match(['GET', 'OPTIONS'], '/kiosk/{kiosk}/jobs/{job}', KioskPrintStatusCo
 Route::get('/kiosk/{kiosk}/cash', [KioskCoinController::class, 'window'])->name('kiosk.cash.window');
 Route::post('/kiosk/{kiosk}/coins', KioskCoinController::class)
     ->name('kiosk.coins.store');
+Route::post('/kiosk/{kiosk}/health', KioskHealthController::class)->name('kiosk.health');
 Route::post('/kiosk/{kiosk}/desk', [KioskDeskController::class, 'publish'])->name('kiosk.desk.publish');
 Route::post('/kiosk/{kiosk}/jobs/{job}/cancel', [KioskDeskController::class, 'cancel'])->name('kiosk.jobs.cancel');
 Route::post('/kiosk/{kiosk}/print-codes/redeem', [KioskPrintCodeController::class, 'redeem'])->name('kiosk.print-codes.redeem');

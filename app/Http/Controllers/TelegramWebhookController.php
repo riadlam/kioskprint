@@ -17,13 +17,19 @@ class TelegramWebhookController extends Controller
 
         $text = trim((string) $request->input('message.text', ''));
         $chatId = $request->input('message.chat.id');
+        $chatType = (string) $request->input('message.chat.type', '');
 
-        if (! is_numeric($chatId) || ! str_starts_with($text, '/start')) {
+        if ($chatType !== 'private' || ! is_numeric($chatId) || ! str_starts_with($text, '/start')) {
             return response()->json(['ok' => true]);
         }
 
         $settings = PrintSetting::current();
         $incoming = (string) $chatId;
+        $owner = trim((string) config('telegram.owner_id'));
+
+        if ($owner !== '' && ! hash_equals($owner, $incoming)) {
+            return response()->json(['ok' => true]);
+        }
 
         if ($settings->telegram_chat_id && (string) $settings->telegram_chat_id !== $incoming) {
             return response()->json(['ok' => true]);

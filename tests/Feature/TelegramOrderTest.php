@@ -97,17 +97,17 @@ class TelegramOrderTest extends TestCase
         ]);
 
         $this->postJson('/telegram/webhook/wrong', [
-            'message' => ['text' => '/start', 'chat' => ['id' => 55]],
+            'message' => ['text' => '/start', 'chat' => ['id' => 55, 'type' => 'private']],
         ])->assertNotFound();
 
         $this->postJson('/telegram/webhook/hook-secret', [
-            'message' => ['text' => '/start', 'chat' => ['id' => 55]],
+            'message' => ['text' => '/start', 'chat' => ['id' => 55, 'type' => 'private']],
         ])->assertOk();
 
         $this->assertSame('55', PrintSetting::current()->telegram_chat_id);
 
         $this->postJson('/telegram/webhook/hook-secret', [
-            'message' => ['text' => '/start', 'chat' => ['id' => 99]],
+            'message' => ['text' => '/start', 'chat' => ['id' => 99, 'type' => 'private']],
         ])->assertOk();
 
         $this->assertSame('55', PrintSetting::query()->value('telegram_chat_id'));

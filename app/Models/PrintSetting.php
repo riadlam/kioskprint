@@ -9,6 +9,7 @@ class PrintSetting extends Model
     protected $fillable = [
         'toner_save',
         'telegram_chat_id',
+        'status_message_id',
     ];
 
     protected function casts(): array

@@ -47,7 +47,42 @@ class SetTelegramWebhook extends Command
         }
 
         $this->info('Telegram webhook is registered.');
+        $this->registerStatusBot($appUrl);
 
         return self::SUCCESS;
+    }
+
+    private function registerStatusBot(string $appUrl): void
+    {
+        $token = trim((string) config('telegram.status_bot_token'));
+        $secret = trim((string) config('telegram.status_webhook_secret'));
+
+        if ($token === '' || $secret === '') {
+            $this->warn('Status bot webhook was skipped. Set TELEGRAM_STATUS_BOT_TOKEN and TELEGRAM_STATUS_WEBHOOK_SECRET.');
+
+            return;
+        }
+
+        try {
+            $response = Http::timeout(15)
+                ->acceptJson()
+                ->asJson()
+                ->post('https://api.telegram.org/bot'.$token.'/setWebhook', [
+                    'url' => $appUrl.'/telegram/status/'.$secret,
+                    'allowed_updates' => ['message'],
+                ]);
+        } catch (Throwable) {
+            $this->error('Status bot webhook was not registered.');
+
+            return;
+        }
+
+        if (! $response->ok() || $response->json('ok') !== true) {
+            $this->error('Telegram rejected the status bot webhook.');
+
+            return;
+        }
+
+        $this->info('Status bot webhook is registered.');
     }
 }

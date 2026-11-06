@@ -30,6 +30,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'kiosk/*/ready',
             'kiosk/*/units/*',
             'telegram/webhook/*',
+            'telegram/status/*',
+            'kiosk/*/health',
             'print/pay/satim/return',
         ]);
     })

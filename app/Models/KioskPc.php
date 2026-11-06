@@ -12,6 +12,8 @@ class KioskPc extends Model
         'last_error_at',
         'last_seen_at',
         'connected_since',
+        'health',
+        'health_reported_at',
     ];
 
     protected function casts(): array
@@ -20,6 +22,8 @@ class KioskPc extends Model
             'last_error_at' => 'datetime',
             'last_seen_at' => 'datetime',
             'connected_since' => 'datetime',
+            'health' => 'array',
+            'health_reported_at' => 'datetime',
         ];
     }
 
