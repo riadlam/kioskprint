@@ -34,9 +34,9 @@ export default function Vision() {
                     <img
                         alt={t.vision.alt}
                         src="/images/algeria-vision.png"
-                        width={720}
-                        height={640}
-                        className="w-full max-w-lg h-auto drop-shadow-xl recolor-green"
+                        width={1024}
+                        height={681}
+                        className="w-full max-w-2xl h-auto rounded-[28px] bg-white shadow-[0_24px_60px_rgba(6,78,59,0.14)]"
                         onError={(e) => {
                             e.currentTarget.src = '/images/vision-fallback.svg';
                         }}

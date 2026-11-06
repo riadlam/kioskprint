@@ -9,7 +9,6 @@ export default function KioskShowcase() {
     const { t, isAr } = useLandingLocale();
     const callouts = [
         { key: 'screen', className: 'top-[14%] end-[4%] sm:end-[8%]' },
-        { key: 'coins', className: 'top-[28%] end-0 sm:end-[2%]' },
         { key: 'output', className: 'top-[42%] start-[6%] sm:start-[10%]' },
     ];
 
